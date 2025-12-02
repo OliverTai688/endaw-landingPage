@@ -81,11 +81,6 @@ export default function ContactPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              <Phone className="text-gold/70" size={20} />
-              <span className="text-gray-300 text-sm">+886 912-345-678</span>
-            </div>
-
-            <div className="flex items-center gap-4">
               <MapPin className="text-gold/70" size={20} />
               <span className="text-gray-300 text-sm">Taipei, Taiwan</span>
             </div>
