@@ -5,7 +5,7 @@ import { Star, Package, ShoppingBag, Sparkles } from "lucide-react";
 
 const products = [
   { title: "Aurora Lamp", icon: Star, desc: "Luxury ambient lighting." },
-  { title: "GoldWave Speaker", icon: Package, desc: "Premium sound quality." },
+  { title: "ENDAW Speaker", icon: Package, desc: "Premium sound quality." },
   { title: "Nightfall Watch", icon: ShoppingBag, desc: "Elegant craftsmanship." },
   { title: "Eclipse Perfume", icon: Sparkles, desc: "Exclusive fragrance." },
 ];

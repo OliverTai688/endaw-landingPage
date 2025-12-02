@@ -13,16 +13,20 @@ export default function Navbar() {
     <nav className="w-full bg-black text-white fixed top-0 left-0 z-50 border-b border-gold/30">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* Logo */}
-        <div className="flex items-center gap-2">
+        {/* Logo：使用原尺寸，但自動縮小 */}
+        <div className="flex items-center">
           <Image
-            src="/logo-black.png"
-            alt="Logo"
-            width={40}
-            height={40}
-            className="rounded-full"
+            src="/logo/endaw.png"
+            alt="ENDAW Logo"
+            width={1434}
+            height={647}
+            priority
+            className="
+              object-contain 
+              w-32 md:w-40 
+              invert brightness-200     /* 將黑色 Logo 反白 + 提亮 */
+            "
           />
-          <span className="text-xl font-bold tracking-wide">GoldWave</span>
         </div>
 
         {/* Desktop menu */}
