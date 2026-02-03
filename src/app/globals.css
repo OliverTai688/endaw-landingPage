@@ -37,6 +37,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-gold: #D4AF37;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -116,6 +117,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -127,23 +129,35 @@
   line-height: 1.75;
 }
 
-.prose h1, .prose h2, .prose h3, .prose h4 {
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
   color: var(--foreground);
   font-weight: 300;
   margin-top: 2em;
   margin-bottom: 1em;
 }
 
-.prose h1 { font-size: 2.25em; }
-.prose h2 { font-size: 1.5em; }
-.prose h3 { font-size: 1.25em; }
+.prose h1 {
+  font-size: 2.25em;
+}
+
+.prose h2 {
+  font-size: 1.5em;
+}
+
+.prose h3 {
+  font-size: 1.25em;
+}
 
 .prose p {
   margin-top: 1.25em;
   margin-bottom: 1.25em;
 }
 
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   margin-top: 1.25em;
   margin-bottom: 1.25em;
   padding-left: 1.625em;
@@ -156,10 +170,10 @@
 }
 
 .prose-invert {
-  --foreground: oklch(0.985 0 0); /* Light text for dark background */
+  --foreground: oklch(0.985 0 0);
+  /* Light text for dark background */
 }
 
 .prose-lg {
   font-size: 1.125rem;
 }
-

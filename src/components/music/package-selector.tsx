@@ -36,7 +36,7 @@ export function PackageSelector({ levels, onSelectPackage }: PackageSelectorProp
                                 className={`
                   px-8 py-3 rounded-lg border transition-all duration-300 text-base font-medium
                   ${selectedLevelId === level.id
-                                        ? "bg-gold text-black border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]"
+                                        ? "bg-gold text-white border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]"
                                         : "bg-transparent text-white border-gray-700 hover:border-gold/40"
                                     }
                 `}
