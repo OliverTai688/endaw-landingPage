@@ -322,8 +322,8 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                                                         disabled={status === "sending"}
                                                         onClick={() => setSuggestionType(type.id as any)}
                                                         className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${suggestionType === type.id
-                                                            ? "bg-[#D4AF37]/20 border-[#D4AF37] text-[#D4AF37]"
-                                                            : "bg-white/10 border-white/10 text-white hover:border-white/30"
+                                                            ? "bg-white/20 border-white text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                                                            : "bg-white/5 border-white/10 text-white/60 hover:border-white/30"
                                                             }`}
                                                     >
                                                         {type.icon}
@@ -343,7 +343,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                                                     disabled={status === "sending"}
                                                     onChange={(e) => setImageLink(e.target.value)}
                                                     placeholder="https://example.com/image.jpg"
-                                                    className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-[#D4AF37] outline-none transition-all"
+                                                    className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-2 text-sm text-white focus:border-white outline-none transition-all"
                                                 />
                                             </div>
                                         )}
@@ -359,7 +359,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                                                 disabled={status === "sending"}
                                                 onChange={(e) => setContent(e.target.value)}
                                                 placeholder={suggestionType === "comment" ? "請輸入您的建議內容..." : "請輸入要修改後的內容..."}
-                                                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-[#D4AF37] outline-none transition-all resize-none shadow-inner"
+                                                className="w-full bg-zinc-800 border border-white/10 rounded-lg px-4 py-3 text-sm text-white focus:border-white outline-none transition-all resize-none shadow-inner"
                                             />
                                         </div>
                                     </div>
@@ -375,7 +375,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                                     whileTap={{ scale: 0.98 }}
                                     className={`w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold uppercase tracking-wider transition-all ${status === "success"
                                         ? "bg-green-500 text-white"
-                                        : "bg-[#D4AF37] text-black hover:brightness-110 shadow-[0_0_20px_rgba(212,175,55,0.3)]"
+                                        : "bg-white text-black hover:bg-zinc-200 shadow-[0_0_20px_rgba(255,255,255,0.15)]"
                                         }`}
                                 >
                                     {status === "idle" && <><Send size={18} /> 發送建議</>}
@@ -396,10 +396,10 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
-                        className="fixed bottom-24 left-8 z-[100] bg-zinc-900/95 backdrop-blur-md border border-gold/50 rounded-lg px-4 py-3 text-sm text-white flex items-center gap-3 shadow-2xl feedback-ignore"
+                        className="fixed bottom-24 left-8 z-[100] bg-zinc-900/95 backdrop-blur-md border border-white/30 rounded-lg px-4 py-3 text-sm text-white flex items-center gap-3 shadow-2xl feedback-ignore"
                     >
-                        <div className="bg-gold/20 p-1.5 rounded-full">
-                            <Info size={16} className="text-gold" />
+                        <div className="bg-white/20 p-1.5 rounded-full">
+                            <Info size={16} className="text-white" />
                         </div>
                         <span className="font-medium tracking-wide">選取您要修改的區塊（已開啟自動截圖）</span>
                     </motion.div>

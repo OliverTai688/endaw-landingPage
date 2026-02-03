@@ -41,7 +41,7 @@ export function FAQAccordion({ faqs, title = "常見問題" }: FAQAccordionProps
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ delay: 0.2, duration: 0.8 }}
-                className="h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent mb-12"
+                className="h-px bg-gradient-to-r from-transparent via-white/30 to-transparent mb-12"
             />
 
             {/* FAQ Items */}
@@ -50,7 +50,7 @@ export function FAQAccordion({ faqs, title = "常見問題" }: FAQAccordionProps
                     // Render with categories
                     Object.entries(groupedFAQs).map(([category, categoryFAQs], categoryIndex) => (
                         <div key={category} className="mb-8">
-                            <h3 className="text-lg font-light text-gold mb-4">{category}</h3>
+                            <h3 className="text-lg font-light text-white mb-4">{category}</h3>
                             <div className="space-y-3">
                                 {categoryFAQs.map((faq, faqIndex) => {
                                     const globalIndex = categoryIndex * 100 + faqIndex;
@@ -105,18 +105,18 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
             <div
                 className={`
           border rounded-lg overflow-hidden transition-all duration-300
-          ${isOpen ? "border-gold/40 bg-gradient-to-br from-gray-900/50 to-black/50" : "border-gray-800 bg-gray-900/30"}
+          ${isOpen ? "border-white/40 bg-gradient-to-br from-gray-900/50 to-black/50" : "border-gray-800 bg-gray-900/30"}
         `}
             >
                 {/* Question */}
                 <button
                     onClick={onToggle}
-                    className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-gold/5 transition-colors duration-300"
+                    className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left hover:bg-white/5 transition-colors duration-300"
                 >
                     <span
                         className={`
               font-light transition-colors duration-300
-              ${isOpen ? "text-gold" : "text-white group-hover:text-gold/80"}
+              ${isOpen ? "text-white" : "text-white/60 group-hover:text-white/90"}
             `}
                     >
                         {faq.question}
@@ -128,7 +128,7 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
                     >
                         <ChevronDown
                             size={20}
-                            className={`transition-colors duration-300 ${isOpen ? "text-gold" : "text-gray-400"}`}
+                            className={`transition-colors duration-300 ${isOpen ? "text-white" : "text-gray-400"}`}
                         />
                     </motion.div>
                 </button>
@@ -144,7 +144,7 @@ function FAQItem({ faq, index, isOpen, onToggle }: FAQItemProps) {
                             className="overflow-hidden"
                         >
                             <div className="px-6 pb-4 pt-2">
-                                <div className="h-px bg-gradient-to-r from-gold/20 via-gold/50 to-gold/20 mb-4" />
+                                <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10 mb-4" />
                                 <div className="prose prose-invert prose-sm max-w-none text-gray-300">
                                     {faq.answer}
                                 </div>

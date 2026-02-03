@@ -53,14 +53,14 @@ export function CountdownTimer({ deadline, onExpire }: CountdownTimerProps) {
                     ? "bg-red-500/20 border-red-400/40"
                     : isUrgent
                         ? "bg-orange-500/20 border-orange-400/40"
-                        : "bg-gold/10 border-gold/30"
+                        : "bg-white/5 border-white/20"
                 }
       `}
         >
             <Clock
                 size={20}
                 className={`
-          ${isVeryUrgent ? "text-red-400" : isUrgent ? "text-orange-400" : "text-gold"}
+          ${isVeryUrgent ? "text-red-400" : isUrgent ? "text-orange-400" : "text-white"}
         `}
             />
             <div className="flex items-baseline gap-2">
@@ -116,7 +116,7 @@ function TimeUnit({ value, unit, isUrgent }: TimeUnitProps) {
                 animate={{ y: 0, opacity: 1 }}
                 className={`
           text-lg font-light tabular-nums
-          ${isUrgent ? "text-red-300" : "text-gold"}
+          ${isUrgent ? "text-red-300" : "text-white"}
         `}
             >
                 {String(value).padStart(2, "0")}

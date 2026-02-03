@@ -36,8 +36,8 @@ export function PackageSelector({ levels, onSelectPackage }: PackageSelectorProp
                                 className={`
                   px-8 py-3 rounded-lg border transition-all duration-300 text-base font-medium
                   ${selectedLevelId === level.id
-                                        ? "bg-gold text-white border-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]"
-                                        : "bg-transparent text-white border-gray-700 hover:border-gold/40"
+                                        ? "bg-white/10 text-white border-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                                        : "bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-600"
                                     }
                 `}
                             >
@@ -109,13 +109,13 @@ function PackageCard({ package: pkg, index, onSelect }: PackageCardProps) {
             )}
 
             {/* Package Name */}
-            <h4 className="text-xl font-light mb-4 group-hover:text-gold transition-colors duration-300">
+            <h4 className="text-xl font-light mb-4 group-hover:text-white transition-colors duration-300">
                 {pkg.name}
             </h4>
 
             {/* Lesson Count */}
             <div className="mb-4">
-                <div className="text-3xl font-light text-gold mb-1">
+                <div className="text-3xl font-light text-white mb-1">
                     {totalLessons} <span className="text-lg text-gray-400">堂</span>
                 </div>
                 {hasBonus && (
@@ -126,7 +126,7 @@ function PackageCard({ package: pkg, index, onSelect }: PackageCardProps) {
             </div>
 
             {/* Divider */}
-            <div className="h-px bg-gradient-to-r from-gold/20 via-gold/50 to-gold/20 mb-4" />
+            <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10 mb-4" />
 
             {/* Highlights */}
             {pkg.highlights && pkg.highlights.length > 0 && (
@@ -179,7 +179,7 @@ function PackageCard({ package: pkg, index, onSelect }: PackageCardProps) {
 
             {/* Price */}
             <div className="mb-4">
-                <div className="text-3xl font-light text-gold">
+                <div className="text-3xl font-light text-white">
                     NT$ {pkg.price.toLocaleString()}
                 </div>
                 {hasBonus && (
@@ -192,9 +192,9 @@ function PackageCard({ package: pkg, index, onSelect }: PackageCardProps) {
             {/* CTA Button */}
             <motion.button
                 onClick={() => onSelect?.(pkg)}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full bg-gold text-black py-3 rounded-lg font-light hover:bg-gold/90 transition-all duration-300"
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className="w-full bg-white text-black py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white/90 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
             >
                 選擇方案
             </motion.button>
