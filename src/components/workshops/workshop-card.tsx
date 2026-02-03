@@ -38,10 +38,10 @@ export function WorkshopCard({ workshop, index }: WorkshopCardProps) {
             transition={{ delay: 0.1 * index, duration: 0.5 }}
         >
             <Link href={`/workshops/${workshop.id}`}>
-                <div className="group relative bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden border border-gray-800 hover:border-gold/40 transition-all duration-500">
+                <div className="group relative bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden border border-gray-800 hover:border-white/40 transition-all duration-500">
                     {/* Decorative corner accents */}
-                    <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-gold/20 rounded-tl-lg z-10" />
-                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-gold/20 rounded-br-lg z-10" />
+                    <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-white/10 rounded-tl-lg z-10" />
+                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/10 rounded-br-lg z-10" />
 
                     {/* Cover Image */}
                     <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900">
@@ -72,8 +72,8 @@ export function WorkshopCard({ workshop, index }: WorkshopCardProps) {
 
                         {/* Date badge overlay */}
                         <div className="absolute bottom-4 left-4 z-20">
-                            <div className="bg-black/70 backdrop-blur-md border border-gold/30 rounded-lg px-4 py-2">
-                                <div className="flex items-center gap-2 text-gold">
+                            <div className="bg-black/70 backdrop-blur-md border border-white/20 rounded-lg px-4 py-2">
+                                <div className="flex items-center gap-2 text-white">
                                     <Calendar size={16} />
                                     <span className="text-sm font-light">
                                         {formatDate(workshop.schedule.date)}
@@ -86,7 +86,7 @@ export function WorkshopCard({ workshop, index }: WorkshopCardProps) {
                     {/* Content */}
                     <div className="p-6 relative">
                         {/* Title */}
-                        <h3 className="text-2xl font-light tracking-wide mb-2 group-hover:text-gold transition-colors duration-300">
+                        <h3 className="text-2xl font-light tracking-wide mb-2 group-hover:text-white transition-colors duration-300">
                             {workshop.title}
                         </h3>
 
@@ -94,38 +94,38 @@ export function WorkshopCard({ workshop, index }: WorkshopCardProps) {
                         <p className="text-sm text-gray-400 mb-4">{workshop.subtitle}</p>
 
                         {/* Divider */}
-                        <div className="h-px bg-gradient-to-r from-gold/20 via-gold/50 to-gold/20 mb-4" />
+                        <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10 mb-4" />
 
                         {/* Details Grid */}
                         <div className="grid grid-cols-2 gap-3 mb-4">
                             <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <Clock size={14} className="text-gold/70" />
+                                <Clock size={14} className="text-white/60" />
                                 <span>{formatTime(workshop.schedule.date)}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-gray-400">
-                                <Users size={14} className="text-gold/70" />
+                                <Users size={14} className="text-white/60" />
                                 <span>
-                                    剩餘 <span className="text-gold font-medium">{workshop.capacity.remaining}</span> 位
+                                    剩餘 <span className="text-white font-medium">{workshop.capacity.remaining}</span> 位
                                 </span>
                             </div>
                         </div>
 
                         {/* Location */}
                         <div className="flex items-start gap-2 text-xs text-gray-400 mb-4">
-                            <MapPin size={14} className="text-gold/70 mt-0.5 flex-shrink-0" />
+                            <MapPin size={14} className="text-white/60 mt-0.5 flex-shrink-0" />
                             <span className="line-clamp-1">{workshop.schedule.location}</span>
                         </div>
 
                         {/* Price and CTA */}
                         <div className="flex items-center justify-between">
                             <div>
-                                <span className="text-2xl font-light text-gold">
+                                <span className="text-2xl font-light text-white">
                                     NT$ {workshop.price.toLocaleString()}
                                 </span>
                             </div>
                             <motion.div
                                 whileHover={{ x: 5 }}
-                                className="text-gold text-sm font-light"
+                                className="text-white/80 text-sm font-light"
                             >
                                 查看詳情 →
                             </motion.div>
@@ -136,19 +136,18 @@ export function WorkshopCard({ workshop, index }: WorkshopCardProps) {
                             {workshop.tags.slice(0, 3).map((tag) => (
                                 <span
                                     key={tag}
-                                    className="px-2 py-1 bg-gold/10 border border-gold/20 rounded text-xs text-gold/80"
+                                    className="px-2 py-1 bg-white/5 border border-white/10 rounded text-xs text-gray-400"
                                 >
                                     {tag}
                                 </span>
                             ))}
                         </div>
 
-                        {/* Hover shimmer effect */}
                         <motion.div
                             initial={{ x: "-100%" }}
                             whileHover={{ x: "100%" }}
                             transition={{ duration: 0.8, ease: "easeInOut" }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent pointer-events-none"
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"
                         />
                     </div>
                 </div>

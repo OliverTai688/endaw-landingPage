@@ -224,7 +224,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed pointer-events-none z-[90] border-2 border-gold/60 bg-gold/5 rounded-sm transition-all duration-150"
+                        className="fixed pointer-events-none z-[90] border-2 border-white/60 bg-white/5 rounded-sm transition-all duration-150"
                         style={{
                             top: highlightRect.top - window.scrollY,
                             left: highlightRect.left - window.scrollX,
@@ -242,7 +242,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setIsFeedbackMode(!isFeedbackMode)}
                     className={`flex items-center gap-2 px-6 py-3 rounded-full shadow-2xl transition-all duration-300 ${isFeedbackMode
-                        ? "bg-gold text-black font-bold"
+                        ? "bg-white text-black font-bold"
                         : "bg-zinc-900/80 backdrop-blur-md text-white border border-white/20"
                         }`}
                 >
@@ -266,11 +266,11 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                             initial={{ scale: 0.9, opacity: 0, y: 20 }}
                             animate={{ scale: 0.95, opacity: 1, y: 0 }}
                             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                            className="relative w-full max-w-xl bg-zinc-900 border border-gold/30 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+                            className="relative w-full max-w-xl bg-zinc-900 border border-white/20 rounded-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
                         >
                             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
                                 <h3 className="text-xl font-light text-white flex items-center gap-2">
-                                    <MessageSquare className="text-gold" size={24} />
+                                    <MessageSquare className="text-white" size={24} />
                                     提供修改建議
                                 </h3>
                                 <button
@@ -285,7 +285,7 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                                 <form id="feedback-form" onSubmit={handleSubmit} className="space-y-6">
                                     <div className="space-y-4">
                                         <div className="p-4 bg-white/10 border border-white/20 rounded-lg shadow-inner">
-                                            <p className="text-[10px] text-gold/80 uppercase tracking-widest font-bold mb-1">已選取區域</p>
+                                            <p className="text-[10px] text-white/80 uppercase tracking-widest font-bold mb-1">已選取區域</p>
                                             <p className="text-sm text-zinc-100 font-medium">"{selectedElement.context}"</p>
                                         </div>
 

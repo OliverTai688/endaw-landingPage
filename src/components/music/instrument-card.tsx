@@ -24,10 +24,10 @@ export function InstrumentCard({ instrument, index }: InstrumentCardProps) {
             transition={{ delay: 0.1 * index, duration: 0.5 }}
         >
             <Link href={`/music/${instrument.nameEn}`}>
-                <div className="group relative bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden border border-gray-800 hover:border-gold/40 transition-all duration-500 h-full">
+                <div className="group relative bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden border border-gray-800 hover:border-white/40 transition-all duration-500 h-full">
                     {/* Decorative corner accents */}
-                    <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-gold/20 rounded-tl-lg z-10" />
-                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-gold/20 rounded-br-lg z-10" />
+                    <div className="absolute top-0 left-0 w-12 h-12 border-t-2 border-l-2 border-white/10 rounded-tl-lg z-10" />
+                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-2 border-r-2 border-white/10 rounded-br-lg z-10" />
 
                     {/* Cover Image */}
                     <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900">
@@ -56,10 +56,9 @@ export function InstrumentCard({ instrument, index }: InstrumentCardProps) {
                             )}
                         </div>
 
-                        {/* Instrument icon */}
                         <div className="absolute bottom-4 right-4 z-20">
-                            <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm border border-gold/30 flex items-center justify-center">
-                                <Music2 size={20} className="text-gold" />
+                            <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white">
+                                <Music2 size={20} />
                             </div>
                         </div>
                     </div>
@@ -67,7 +66,7 @@ export function InstrumentCard({ instrument, index }: InstrumentCardProps) {
                     {/* Content */}
                     <div className="p-6 relative">
                         {/* Instrument Name */}
-                        <h3 className="text-2xl font-light tracking-wide mb-2 group-hover:text-gold transition-colors duration-300">
+                        <h3 className="text-2xl font-light tracking-wide mb-2 group-hover:text-white transition-colors duration-300">
                             {instrument.name}
                         </h3>
 
@@ -77,13 +76,12 @@ export function InstrumentCard({ instrument, index }: InstrumentCardProps) {
                         </p>
 
                         {/* Divider */}
-                        <div className="h-px bg-gradient-to-r from-gold/20 via-gold/50 to-gold/20 mb-4" />
+                        <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10 mb-4" />
 
-                        {/* Package Info */}
                         <div className="flex items-center justify-between mb-4">
                             <div className="text-sm text-gray-400">
-                                <span className="text-gold font-medium">{instrument.levels.length}</span> 等級 •{" "}
-                                <span className="text-gold font-medium">{totalPackages}</span> 套票方案
+                                <span className="text-white font-medium">{instrument.levels.length}</span> 等級 •{" "}
+                                <span className="text-white font-medium">{totalPackages}</span> 套票方案
                             </div>
                         </div>
 
@@ -105,21 +103,19 @@ export function InstrumentCard({ instrument, index }: InstrumentCardProps) {
                             </div>
                         )}
 
-                        {/* CTA */}
                         <motion.div
                             whileHover={{ x: 5 }}
-                            className="flex items-center justify-between text-gold text-sm font-light mt-6"
+                            className="flex items-center justify-between text-white/80 text-sm font-light mt-6"
                         >
                             <span>探索課程</span>
                             <ChevronRight size={16} />
                         </motion.div>
 
-                        {/* Hover shimmer effect */}
                         <motion.div
                             initial={{ x: "-100%" }}
                             whileHover={{ x: "100%" }}
                             transition={{ duration: 0.8, ease: "easeInOut" }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent pointer-events-none"
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none"
                         />
                     </div>
                 </div>
