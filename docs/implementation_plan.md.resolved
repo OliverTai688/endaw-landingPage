@@ -1,0 +1,615 @@
+# Course Module System Implementation Plan
+
+Upgrade the existing landing page website to support two structured course modules: **Workshop Module** (single-session events) and **Music Lesson Package Module** (multi-session package-based lessons). Both modules support in-person learning only with comprehensive payment, refund, and policy management.
+
+---
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Technology Stack Decision Required**
+> 
+> The current codebase is a **static Next.js website** with no backend infrastructure. Implementing the full specification requires:
+> 
+> 1. **Database** - PostgreSQL/MySQL for storing courses, registrations, orders
+> 2. **Backend API** - Next.js API routes or separate backend service
+> 3. **Payment Gateway** - Integration with payment provider (Stripe, TapPay, etc.)
+> 4. **Admin Panel** - CMS for content management (headless CMS or custom-built)
+> 5. **Email Service** - Notification system (SendGrid, AWS SES, Resend, etc.)
+> 
+> **Please confirm:**
+> - Do you want to implement the full system with backend infrastructure?
+> - Or would you prefer to start with a **Phase 1 MVP** using static data and mock flows?
+> - What payment gateway should we integrate? (TapPay was mentioned in conversation history)
+> - What database do you prefer? (PostgreSQL, MySQL, or other)
+> - Admin panel preference? (Custom-built vs. Headless CMS like Sanity/Strapi)
+
+> [!WARNING]
+> **MVP Scope Recommendation**
+> 
+> Given the complexity of the full system (2 modules + admin panel + payment + refund logic + email notifications), I recommend starting with an **MVP approach**:
+> 
+> **Phase 1 (MVP - 2-3 weeks):**
+> - Frontend UI for both modules with static/mock data
+> - Workshop landing pages and registration flow (UI only)
+> - Music catalog and package selection flow (UI only)
+> - Policy sections and FAQ components
+> - Mock payment success flow
+> 
+> **Phase 2 (Backend Integration - 2-3 weeks):**
+> - Database schema implementation
+> - API endpoints for CRUD operations
+> - Real payment gateway integration
+> - Email notification system
+> 
+> **Phase 3 (Admin Panel - 2-3 weeks):**
+> - Admin authentication
+> - Workshop/Music content management
+> - Order management and refund processing
+> - Monthly announcement system
+> 
+> **Please advise which approach you prefer before I proceed.**
+
+---
+
+## Proposed Changes
+
+### Component Organization
+
+The implementation will follow a modular structure aligned with Next.js 16 App Router best practices:
+
+```
+src/
+├── app/
+│   ├── workshops/              # Workshop module routes
+│   │   ├── page.tsx           # Workshop catalog
+│   │   └── [id]/
+│   │       └── page.tsx       # Individual workshop detail
+│   ├── music/                  # Music lesson module routes
+│   │   ├── page.tsx           # Music catalog (instrument selection)
+│   │   └── [instrument]/
+│   │       ├── page.tsx       # Instrument detail + packages
+│   │       └── [packageId]/
+│   │           └── page.tsx   # Package detail + purchase
+│   ├── checkout/              # Shared checkout flow
+│   │   └── page.tsx
+│   ├── success/               # Order success page
+│   │   └── page.tsx
+│   └── admin/                 # Admin panel (Phase 3)
+│       └── ...
+├── components/
+│   ├── workshops/             # Workshop-specific components
+│   │   ├── workshop-card.tsx
+│   │   ├── workshop-hero.tsx
+│   │   ├── workshop-details.tsx
+│   │   └── workshop-policy.tsx
+│   ├── music/                 # Music-specific components
+│   │   ├── instrument-card.tsx
+│   │   ├── package-selector.tsx
+│   │   ├── monthly-announcement.tsx
+│   │   └── music-policy.tsx
+│   ├── shared/                # Shared components
+│   │   ├── checkout-form.tsx
+│   │   ├── payment-form.tsx
+│   │   ├── policy-section.tsx
+│   │   ├── faq-accordion.tsx
+│   │   └── countdown-timer.tsx
+│   └── ui/                    # Existing UI primitives
+├── lib/
+│   ├── api/                  # API client functions (Phase 2)
+│   ├── types/                # TypeScript interfaces
+│   └── utils/                # Helper functions
+└── data/
+    ├── workshops.ts          # Workshop mock data (Phase 1)
+    ├── music.ts              # Music mock data (Phase 1)
+    └── policies.ts           # Policy content
+```
+
+---
+
+### 1. Workshop Module Implementation
+
+#### [NEW] [workshops.ts](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/data/workshops.ts)
+
+Mock data structure for workshops (Phase 1):
+
+```typescript
+interface Workshop {
+  id: string;
+  title: string;
+  subtitle: string;
+  coverImage: string;
+  galleryImages: string[];
+  description: string; // Rich text/HTML
+  instructor: {
+    name: string;
+    bio: string;
+    avatar: string;
+  };
+  schedule: {
+    date: Date;
+    location: string;
+    duration: string;
+  };
+  capacity: {
+    total: number;
+    remaining: number;
+  };
+  price: number;
+  registrationDeadline: Date;
+  tags: string[];
+  status: 'draft' | 'published' | 'closed';
+  policies: {
+    attendanceRules: string;
+    refundPolicy: string;
+  };
+}
+```
+
+#### [NEW] [workshop-card.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/workshops/workshop-card.tsx)
+
+Workshop catalog card component with:
+- Cover image with overlay
+- Title, date, location badge
+- Capacity indicator (e.g., "剩餘 12 位")
+- Price and CTA button
+- Framer Motion animations
+
+#### [NEW] [workshops/[id]/page.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/app/workshops/%5Bid%5D/page.tsx)
+
+Individual workshop detail page with sections:
+- Hero section (cover image, title, date, location, CTA)
+- Story section (long-form description)
+- Instructor section (bio, avatar)
+- Details section (time, location, capacity, price)
+- Policy section (attendance rules, refund policy)
+- FAQ section (collapsible accordion)
+- Sticky CTA bar (mobile)
+
+---
+
+### 2. Music Lesson Package Module
+
+#### [NEW] [music.ts](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/data/music.ts)
+
+Mock data structure for music lessons:
+
+```typescript
+interface Instrument {
+  id: string;
+  name: string;
+  coverImage: string;
+  description: string;
+  containsEquipment: boolean;
+  equipmentDescription?: string;
+  rentalAvailable: boolean;
+  rentalOffsetAllowed: boolean;
+  levels: Level[];
+}
+
+interface Level {
+  id: string;
+  name: string; // e.g., "Beginner", "Intermediate"
+  packages: Package[];
+}
+
+interface Package {
+  id: string;
+  name: string;
+  lessonCount: number;
+  bonusLessons: number; // Buy X get Y free
+  validDuration: number; // Months
+  firstClassDate: Date;
+  registrationStartDates: Date[];
+  formationRequired: boolean; // 拇指琴
+  formationDecisionDays: number;
+  refundPolicy: string;
+  price: number;
+  status: 'draft' | 'published';
+  includedEquipment?: string[];
+}
+
+interface MonthlyAnnouncement {
+  id: string;
+  month: string; // "2026-03"
+  instruments: string[];
+  schedule: {
+    date: Date;
+    time: string;
+    instructor: string;
+  }[];
+  announcements: string[];
+}
+```
+
+#### [NEW] [music/page.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/app/music/page.tsx)
+
+Music catalog page showing all instruments with:
+- Hero section introducing the program
+- Instrument grid with cards
+- Monthly announcement banner
+- CTA to explore instruments
+
+#### [NEW] [music/[instrument]/page.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/app/music/%5Binstrument%5D/page.tsx)
+
+Instrument detail page with:
+- Instrument overview and description
+- Equipment information (if applicable)
+- Rental details (if available)
+- Level selector → Package comparison table
+- Monthly schedule announcement
+- Policy section (3-month validity, leave policy, formation logic)
+- FAQ section
+- CTA for package purchase
+
+---
+
+### 3. Shared Components
+
+#### [NEW] [checkout-form.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/shared/checkout-form.tsx)
+
+Unified checkout form for both modules with:
+- Student information fields (name, email, phone)
+- Workshop-specific: Date confirmation
+- Music-specific: Package duration display, first class date
+- Order summary sidebar
+- Payment form integration
+- Policy acknowledgment checkbox
+
+#### [NEW] [payment-form.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/shared/payment-form.tsx)
+
+Payment integration component (Phase 1 = mock, Phase 2 = real integration):
+- Credit card input (or payment gateway SDK)
+- Loading states during processing
+- Error handling and validation
+- Success/failure callbacks
+
+#### [NEW] [policy-section.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/shared/policy-section.tsx)
+
+Reusable policy display component with:
+- Collapsible sections for different policies
+- Clear formatting for important terms
+- Icon indicators for key points
+
+#### [NEW] [faq-accordion.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/shared/faq-accordion.tsx)
+
+FAQ accordion component with:
+- Smooth expand/collapse animations (Framer Motion)
+- Search/filter functionality
+- Category grouping
+
+#### [NEW] [countdown-timer.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/components/shared/countdown-timer.tsx)
+
+Countdown timer for registration deadlines:
+- Real-time countdown display
+- Visual urgency indicators
+- Auto-hide when expired
+
+---
+
+### 4. Success Page
+
+#### [NEW] [success/page.tsx](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/app/success/page.tsx)
+
+Order confirmation page displaying:
+- Order confirmation message
+- Order summary (what was purchased)
+- Workshop: Event details and location
+- Music: First class information, validity period, leave policy
+- Contact information
+- Next steps instructions
+- Email notification confirmation
+
+---
+
+### 5. Type Definitions
+
+#### [NEW] [types/index.ts](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/lib/types/index.ts)
+
+Centralized TypeScript interfaces for type safety across the application.
+
+---
+
+### 6. Design System Enhancement
+
+#### [MODIFY] [globals.css](file:///Users/pzps0964713/Documents/github/endaw-landingPage/src/app/globals.css)
+
+Add CSS custom properties for the course modules:
+- Workshop theme colors (if different from main brand)
+- Music module theme colors
+- Badge and label styles
+- Countdown timer styles
+- Policy section styling
+
+---
+
+### 7. Conversion Optimization Features
+
+Implement throughout both modules:
+
+- **Scarcity Indicators**: "剩餘 X 位" for workshops, countdown timers
+- **Social Proof**: Instructor credentials, past student testimonials (mock data Phase 1)
+- **Visual Hierarchy**: Clear CTAs, prominent pricing
+- **Trust Signals**: Policy transparency, refund guarantees
+- **Mobile Optimization**: Sticky CTA bars, responsive layouts
+- **Loading States**: Skeleton screens, smooth transitions
+
+---
+
+## Database Schema (Phase 2)
+
+> [!NOTE]
+> **Database Implementation Details**
+> 
+> The following schema will be implemented in Phase 2. Tables include:
+> 
+> - `workshops` - Workshop event data
+> - `music_instruments` - Instrument catalog
+> - `music_levels` - Skill levels per instrument
+> - `music_packages` - Package plans
+> - `monthly_announcements` - Schedule announcements
+> - `users` - Student information
+> - `orders` - Purchase records
+> - `registrations` - Workshop registrations
+> - `memberships` - Music lesson package subscriptions
+> - `refunds` - Refund processing records
+
+High-level schema structure (detailed ERD to be created in Phase 2):
+
+```sql
+-- Workshop tables
+workshops (id, title, subtitle, cover_image, description, instructor_id, date, location, capacity_total, capacity_remaining, price, registration_deadline, status, created_at, updated_at)
+
+workshop_galleries (id, workshop_id, image_url, order)
+
+instructors (id, name, bio, avatar, created_at)
+
+-- Music tables
+music_instruments (id, name, cover_image, description, contains_equipment, equipment_description, rental_available, rental_offset_allowed, created_at)
+
+music_levels (id, instrument_id, name, order)
+
+music_packages (id, level_id, name, lesson_count, bonus_lessons, valid_duration_months, first_class_date, formation_required, formation_decision_days, refund_policy, price, status, created_at)
+
+monthly_announcements (id, month, instrument_id, schedule_data, announcements, created_at)
+
+-- User & Order tables
+users (id, email, name, phone, created_at)
+
+orders (id, user_id, order_type, item_id, amount, payment_status, payment_method, transaction_id, created_at)
+
+workshop_registrations (id, order_id, workshop_id, user_id, status, created_at)
+
+music_memberships (id, order_id, package_id, user_id, valid_from, valid_until, lessons_remaining, status, created_at)
+
+refunds (id, order_id, reason, amount, status, processed_at, created_at)
+```
+
+---
+
+## API Endpoints (Phase 2)
+
+RESTful API structure using Next.js API routes:
+
+**Workshops:**
+- `GET /api/workshops` - List all published workshops
+- `GET /api/workshops/:id` - Get workshop detail
+- `POST /api/workshops/:id/register` - Register for workshop
+- `POST /api/admin/workshops` - Create workshop (admin)
+- `PUT /api/admin/workshops/:id` - Update workshop (admin)
+- `DELETE /api/admin/workshops/:id` - Delete workshop (admin)
+
+**Music:**
+- `GET /api/music/instruments` - List all instruments
+- `GET /api/music/instruments/:id` - Get instrument with levels/packages
+- `GET /api/music/announcements/:month` - Get monthly schedule
+- `POST /api/music/packages/:id/purchase` - Purchase package
+- `POST /api/admin/music/instruments` - Create instrument (admin)
+- `POST /api/admin/music/packages` - Create package (admin)
+- `POST /api/admin/music/announcements` - Create announcement (admin)
+
+**Orders & Payment:**
+- `POST /api/orders` - Create order
+- `GET /api/orders/:id` - Get order status
+- `POST /api/payment/process` - Process payment
+- `POST /api/payment/refund` - Process refund (admin)
+
+---
+
+## Verification Plan
+
+### Phase 1 (Frontend MVP - Static/Mock Data)
+
+#### Manual UI Testing
+
+1. **Workshop Flow Verification**
+   - [ ] Navigate to `/workshops` and verify catalog displays correctly
+   - [ ] Click on a workshop card and verify detail page layout
+   - [ ] Verify all sections render (hero, story, instructor, details, policy, FAQ)
+   - [ ] Test countdown timer shows correct time remaining
+   - [ ] Test capacity indicator displays "剩餘 X 位" correctly
+   - [ ] Click "立即報名" CTA and verify checkout form appears
+   - [ ] Fill out registration form and submit (mock success)
+   - [ ] Verify success page displays correct workshop information
+   - [ ] Test mobile responsiveness (sticky CTA bar, collapsible sections)
+
+2. **Music Lesson Flow Verification**
+   - [ ] Navigate to `/music` and verify instrument catalog
+   - [ ] Click on an instrument (e.g., Guitar) and verify detail page
+   - [ ] Test level selector switches packages correctly
+   - [ ] Verify package comparison table displays all information (lessons, price, duration)
+   - [ ] Verify equipment information displays when applicable
+   - [ ] Verify rental policy section for instruments with rental
+   - [ ] Test FAQ accordion expand/collapse animations
+   - [ ] Click package purchase CTA and verify checkout form
+   - [ ] Fill out form and submit (mock success)
+   - [ ] Verify success page shows first class date, validity period, policies
+   - [ ] Test 拇指琴 formation logic messaging displays correctly
+
+3. **Cross-Browser Testing**
+   - [ ] Test in Chrome, Safari, Firefox
+   - [ ] Test on mobile devices (iOS Safari, Android Chrome)
+   - [ ] Verify animations perform smoothly (Framer Motion)
+   - [ ] Test form validation works correctly
+
+4. **Design & UX Review**
+   - [ ] Verify premium aesthetic matches existing product pages
+   - [ ] Verify conversion optimization elements (scarcity, countdown) work
+   - [ ] Verify policy sections are clear and readable
+   - [ ] Verify FAQ sections answer key questions
+   - [ ] Check loading states and error handling
+
+#### Automated Tests (Phase 1)
+
+```bash
+# Run TypeScript type checking
+pnpm run build
+
+# Run ESLint
+pnpm run lint
+```
+
+Component-level tests (to be written):
+- Workshop card component renders correctly
+- Music package selector switches levels
+- FAQ accordion expands/collapses
+- Countdown timer calculates correctly
+- Form validation works
+
+---
+
+### Phase 2 (Backend Integration)
+
+#### API Testing
+
+1. **Workshop API Tests**
+   ```bash
+   # Test workshop CRUD operations
+   curl -X GET http://localhost:3000/api/workshops
+   curl -X GET http://localhost:3000/api/workshops/:id
+   curl -X POST http://localhost:3000/api/workshops/:id/register -d '{"email":"test@example.com","name":"Test User"}'
+   ```
+
+2. **Music API Tests**
+   ```bash
+   # Test music lesson APIs
+   curl -X GET http://localhost:3000/api/music/instruments
+   curl -X GET http://localhost:3000/api/music/instruments/guitar
+   curl -X POST http://localhost:3000/api/music/packages/:id/purchase
+   ```
+
+3. **Payment Integration Tests**
+   - [ ] Test payment gateway sandbox environment
+   - [ ] Verify successful payment creates order record
+   - [ ] Verify failed payment shows error message
+   - [ ] Test refund processing (admin)
+   - [ ] Verify email notifications are sent
+
+#### Database Tests
+
+```bash
+# Run database migrations
+npx prisma migrate dev
+
+# Seed test data
+npx prisma db seed
+
+# Test database queries
+```
+
+---
+
+### Phase 3 (Admin Panel)
+
+#### Admin Feature Tests
+
+1. **Workshop Management**
+   - [ ] Admin can create new workshop
+   - [ ] Admin can upload cover image and gallery
+   - [ ] Admin can edit workshop details
+   - [ ] Admin can change status (draft/published/closed)
+   - [ ] Admin can view registrations
+
+2. **Music Management**
+   - [ ] Admin can create instruments and packages
+   - [ ] Admin can edit package details
+   - [ ] Admin can publish monthly announcements
+   - [ ] Admin can manage class formation decisions (拇指琴)
+   - [ ] Admin can view memberships and lesson tracking
+
+3. **Order Management**
+   - [ ] Admin can view all orders
+   - [ ] Admin can filter orders by status, date, module
+   - [ ] Admin can process refunds
+   - [ ] Admin can export order data
+
+---
+
+## Risk Mitigation
+
+> [!CAUTION]
+> **Critical Implementation Risks**
+
+1. **Payment Integration Security**
+   - Implement PCI-compliant payment handling
+   - Use payment gateway SDKs (never store card data)
+   - Implement webhook verification for payment confirmations
+
+2. **Refund Processing**
+   - Ensure refund status is auditable
+   - Implement approval workflow for refunds
+   - Maintain transaction history for accounting
+
+3. **Class Formation Logic** (拇指琴)
+   - Clear communication of formation risk before payment
+   - Automated email 3 days before decision deadline
+   - Manual admin decision interface
+   - Automatic refund trigger if class cancelled
+
+4. **Data Consistency**
+   - Implement database transactions for order creation
+   - Prevent double-booking with capacity management
+   - Handle concurrent registrations safely
+
+5. **Email Reliability**
+   - Use reliable email service (SendGrid/AWS SES)
+   - Implement retry logic for failed sends
+   - Store email log for debugging
+
+---
+
+## Timeline Estimate
+
+**Phase 1 (MVP Frontend - 2-3 weeks):**
+- Week 1: Workshop module UI + components
+- Week 2: Music module UI + components
+- Week 3: Checkout flow, success page, testing
+
+**Phase 2 (Backend Integration - 2-3 weeks):**
+- Week 1: Database schema, migrations, seed data
+- Week 2: API endpoints, payment integration
+- Week 3: Email service, testing, bug fixes
+
+**Phase 3 (Admin Panel - 2-3 weeks):**
+- Week 1: Admin authentication, workshop management
+- Week 2: Music management, monthly announcements
+- Week 3: Order management, analytics, deployment
+
+**Total: 6-9 weeks** for full system implementation.
+
+---
+
+## Next Steps
+
+1. **User Decision Required**: Review the implementation plan and provide feedback on:
+   - MVP vs. full implementation approach
+   - Technology stack preferences (database, payment gateway, email service)
+   - Admin panel requirements (custom vs. headless CMS)
+   - Timeline and priority adjustments
+
+2. **Once Approved**: I will proceed with Phase 1 implementation, starting with:
+   - Type definitions and data structures
+   - Workshop module UI components
+   - Music module UI components
+   - Checkout flow integration
+   - Success page implementation

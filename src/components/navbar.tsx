@@ -9,6 +9,16 @@ import { motion, AnimatePresence } from "framer-motion";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isInternal, setIsInternal] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const cookies = document.cookie.split('; ');
+      const authCookie = cookies.find(row => row.startsWith('internal_access='));
+      setIsInternal(!!authCookie && authCookie.split('=')[1] === 'true');
+    };
+    checkAuth();
+  }, []);
 
   const menuItems = [
     { name: "Home", href: "/home" },
@@ -28,15 +38,14 @@ export default function Navbar() {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      className={`w-full bg-black/95 backdrop-blur-md text-white fixed top-0 left-0 z-50 border-b transition-all duration-500 ${
-        scrolled ? "border-gold/20 shadow-lg shadow-black/50" : "border-gold/10"
-      }`}
+      className={`w-full bg-black/95 backdrop-blur-md text-white fixed top-0 left-0 z-50 border-b transition-all duration-500 ${scrolled ? "border-gold/20 shadow-lg shadow-black/50" : "border-gold/10"
+        }`}
     >
       {/* Top accent line */}
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/30 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-12 h-20 flex items-center justify-between">
-        
+
         {/* Logo */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -78,6 +87,20 @@ export default function Navbar() {
               </Link>
             </motion.div>
           ))}
+          {isInternal && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: 0.8 }}
+            >
+              <Link
+                href="/admin"
+                className="ml-4 px-4 py-1.5 rounded-full bg-gold text-black text-[10px] uppercase tracking-widest font-bold hover:bg-white transition-all duration-300 shadow-lg shadow-gold/20"
+              >
+                Internal Portal
+              </Link>
+            </motion.div>
+          )}
         </div>
 
         {/* Mobile menu toggle */}
@@ -145,6 +168,15 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+              {isInternal && (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="block w-full text-center mt-6 px-4 py-3 bg-gold text-black rounded-lg text-sm uppercase tracking-widest font-bold"
+                >
+                  Internal Portal
+                </Link>
+              )}
             </div>
 
             <div className="h-px bg-gradient-to-r from-transparent via-gold/20 to-transparent" />
