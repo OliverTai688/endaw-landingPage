@@ -9,9 +9,74 @@ import { workshops, workshopFAQs } from "@/data/workshops";
 import Footer from "@/components/footer";
 import FeedbackOverlay from "@/components/admin/FeedbackOverlay";
 
+import { useEffect, useState } from "react";
+import { useContent } from "@/components/providers/ContentProvider";
+import { ContentType, ContentEntity, PublishStatus } from "@/domain/models/Content";
+
 export default function WorkshopsPage() {
+    const { refreshContent, isLoading } = useContent();
+    const [displayWorkshops, setDisplayWorkshops] = useState<any[]>(workshops);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+
+    useEffect(() => {
+        const checkPreview = () => {
+            const cookies = document.cookie.split('; ');
+            const authCookie = cookies.find(row => row.startsWith('internal_access='));
+            const urlParams = new URLSearchParams(window.location.search);
+            const hasPreviewParam = urlParams.get('preview') === 'true';
+
+            if ((authCookie && authCookie.split('=')[1] === 'true') || hasPreviewParam) {
+                setIsPreviewMode(true);
+                return true;
+            }
+            return false;
+        };
+
+        async function load() {
+            const showAll = checkPreview();
+            const dynamicItems = await refreshContent(ContentType.WORKSHOP);
+
+            const filteredItems = dynamicItems
+                .filter(item => showAll || item.publishStatus === PublishStatus.PUBLISHED)
+                .map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    subtitle: item.subtitle || "新推出的工作坊",
+                    description: item.description,
+                    coverImage: item.coverImage,
+                    price: item.price,
+                    tags: item.tags || ["新活動"],
+                    // Robust mapping for nested structures required by WorkshopCard
+                    schedule: item.metadata?.schedule || {
+                        date: item.createdAt || new Date(),
+                        location: item.metadata?.location || "城市實驗室",
+                        duration: item.metadata?.duration || "2 小時"
+                    },
+                    capacity: item.metadata?.capacity || {
+                        total: 20,
+                        remaining: 20
+                    },
+                    instructor: item.metadata?.instructor || {
+                        name: "資深講師",
+                        bio: "專業音樂、藝術教育工作者",
+                        avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=400"
+                    }
+                }));
+
+            if (filteredItems.length > 0) {
+                setDisplayWorkshops([...filteredItems, ...workshops]);
+            }
+        }
+        load();
+    }, [refreshContent]);
+
     return (
         <FeedbackOverlay pageName="城市實驗室工作坊">
+            {isPreviewMode && (
+                <div className="fixed top-0 left-0 right-0 z-[100] bg-orange-500/90 text-white text-[10px] uppercase tracking-[0.2em] font-bold py-1 text-center backdrop-blur-md">
+                    Preview Mode Active &bull; Showing Drafts and Published Content
+                </div>
+            )}
             <Navbar />
             <div className="min-h-screen bg-black text-white relative overflow-hidden">
                 {/* Background effects */}
@@ -29,7 +94,7 @@ export default function WorkshopsPage() {
                 />
 
                 <div className="relative container mx-auto px-6 py-24">
-                    {/* Page Header */}
+                    {/* ... page header remains same ... */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -62,7 +127,7 @@ export default function WorkshopsPage() {
 
                     {/* Workshop Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-32">
-                        {workshops.map((workshop, index) => (
+                        {displayWorkshops.map((workshop, index) => (
                             <WorkshopCard key={workshop.id} workshop={workshop} index={index} />
                         ))}
                     </div>

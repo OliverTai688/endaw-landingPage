@@ -38,9 +38,17 @@ function AdminDashboardContent() {
 
     const pages: ProtectedPage[] = [
         {
+            id: 'content',
+            title: '統一內容管理',
+            description: '在一個地方管理工作坊與樂器課程',
+            href: '/admin/content',
+            status: 'published',
+            icon: <LayoutDashboard className="text-emerald-400" size={24} />
+        },
+        {
             id: 'workshops',
             title: '城市實驗室工作坊',
-            description: '管理單次活動與工作坊課程',
+            description: '預覽單次活動與工作坊課程頁面',
             href: '/workshops',
             status: 'pending',
             icon: <Sparkles className="text-gold" size={24} />
@@ -48,7 +56,7 @@ function AdminDashboardContent() {
         {
             id: 'music',
             title: '樂器訓練所',
-            description: '管理系統化長期待發布課程',
+            description: '預覽系統化長期待發布課程頁面',
             href: '/music',
             status: 'pending',
             icon: <Music className="text-blue-400" size={24} />

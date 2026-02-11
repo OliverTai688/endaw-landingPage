@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "ENDAW music, your choice!",
 };
 
+import { ContentProvider } from "@/components/providers/ContentProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,7 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <ContentProvider>
+          {children}
+        </ContentProvider>
       </body>
     </html>
   );

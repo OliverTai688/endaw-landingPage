@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ContentType {
+  WORKSHOP
+  MUSIC
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Content {
+  id            String        @id @default(cuid())
+  title         String
+  subtitle      String?
+  description   String        @db.Text
+  coverImage    String
+  price         Int
+  type          ContentType
+  status        PublishStatus @default(DRAFT)
+  tags          String[]
+  metadata      Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relationships
+  workshop      Workshop?
+  music         MusicMetadata?
+}
+
+model Workshop {
+  id         String   @id @default(cuid())
+  contentId  String   @unique
+  content    Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  location   String?
+  duration   String?
+  totalCap   Int?
+  remCap     Int?
+}
+
+model MusicMetadata {
+  id                    String   @id @default(cuid())
+  contentId             String   @unique
+  content               Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  nameEn                String?
+  containsEquipment     Boolean  @default(false)
+  equipmentDescription  String?
+  rentalAvailable       Boolean  @default(false)
+  rentalOffsetAllowed   Boolean  @default(false)
+}
