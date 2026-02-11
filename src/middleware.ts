@@ -8,19 +8,24 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname === "/contact" &&
         request.method === "POST"
     ) {
-        const forwarded = request.headers.get("x-forwarded-for");
-        const ip = forwarded ? forwarded.split(",")[0] : (request.headers.get("x-real-ip") || "127.0.0.1");
-        const { success, limit, reset, remaining } = await contactRateLimit.limit(ip);
+        try {
+            const forwarded = request.headers.get("x-forwarded-for");
+            const ip = forwarded ? forwarded.split(",")[0] : (request.headers.get("x-real-ip") || "127.0.0.1");
+            const { success, limit, reset, remaining } = await contactRateLimit.limit(ip);
 
-        if (!success) {
-            return new NextResponse("Too Many Requests", {
-                status: 429,
-                headers: {
-                    "X-RateLimit-Limit": limit.toString(),
-                    "X-RateLimit-Remaining": remaining.toString(),
-                    "X-RateLimit-Reset": reset.toString(),
-                },
-            });
+            if (!success) {
+                return new NextResponse("Too Many Requests", {
+                    status: 429,
+                    headers: {
+                        "X-RateLimit-Limit": limit.toString(),
+                        "X-RateLimit-Remaining": remaining.toString(),
+                        "X-RateLimit-Reset": reset.toString(),
+                    },
+                });
+            }
+        } catch (error) {
+            console.error("Rate limit middleware error:", error);
+            // Fallback: allow the request to proceed if rate limiting fails
         }
 
         // Origin/Referer Validation (Basic)
