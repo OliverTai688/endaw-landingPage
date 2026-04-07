@@ -4,18 +4,108 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Music2, Package, Calendar, AlertCircle, Info, ChevronRight } from "lucide-react";
+import { Package, Calendar, AlertCircle, Info, ChevronRight } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { PackageSelector } from "@/components/music/package-selector";
 import { FAQAccordion } from "@/components/shared/faq-accordion";
-import { instruments, monthlyAnnouncements } from "@/data/music";
 import FeedbackOverlay from "@/components/admin/FeedbackOverlay";
-import type { Package as PackageType } from "@/lib/types";
+import type { Package as PackageType, Instrument, MonthlyAnnouncement } from "@/lib/types";
+import { useState, useEffect } from "react";
+
+function mapDbInstrument(data: any): Instrument {
+    return {
+        id: data.id,
+        name: data.name,
+        nameEn: data.nameEn,
+        coverImage: data.coverImage,
+        description: data.description,
+        containsEquipment: data.containsEquipment,
+        equipmentDescription: data.equipmentDescription || undefined,
+        rentalAvailable: data.rentalAvailable,
+        rentalOffsetAllowed: data.rentalOffsetAllowed,
+        levels: (data.levels || []).map((level: any) => ({
+            id: level.id,
+            name: level.name,
+            packages: (level.packages || []).map((pkg: any) => ({
+                id: pkg.id,
+                name: pkg.name,
+                lessonCount: pkg.lessonCount,
+                bonusLessons: pkg.bonusLessons,
+                validDuration: pkg.validDuration,
+                firstClassDate: pkg.firstClassDate ? new Date(pkg.firstClassDate) : new Date(),
+                registrationStartDates: (pkg.registrationStartDates || []).map((d: string) => new Date(d)),
+                formationRequired: pkg.formationRequired,
+                formationDecisionDays: pkg.formationDecisionDays,
+                refundPolicy: pkg.refundPolicy,
+                price: pkg.price,
+                status: pkg.status === "PUBLISHED" ? "published" as const : "draft" as const,
+                includedEquipment: pkg.includedEquipment || [],
+                highlights: pkg.highlights || [],
+            })),
+        })),
+        faqs: (data.faqs || []).map((faq: any) => ({
+            question: faq.question,
+            answer: faq.answer,
+        })),
+    };
+}
+
+function mapDbAnnouncement(data: any): MonthlyAnnouncement {
+    return {
+        id: data.id,
+        month: data.month,
+        instruments: data.instrumentIds || [],
+        schedule: (data.schedule || []).map((s: any) => ({
+            date: new Date(s.date),
+            time: s.time,
+            instructor: s.instructor,
+            type: s.type,
+        })),
+        announcements: data.announcements || [],
+    };
+}
 
 export default function InstrumentDetailPage() {
     const params = useParams();
-    const instrument = instruments.find((i) => i.nameEn === params.instrument);
+    const [instrument, setInstrument] = useState<Instrument | null>(null);
+    const [currentAnnouncement, setCurrentAnnouncement] = useState<MonthlyAnnouncement | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const currentMonth = "2026-03";
+
+    useEffect(() => {
+        if (!params.instrument) return;
+
+        Promise.all([
+            fetch(`/api/bff/v1/music?nameEn=${params.instrument}`).then((r) => r.json()),
+            fetch(`/api/bff/v1/music?type=announcements&month=${currentMonth}`).then((r) => r.json()),
+        ])
+            .then(([instrumentJson, announcementJson]) => {
+                if (instrumentJson.success && instrumentJson.data) {
+                    setInstrument(mapDbInstrument(instrumentJson.data));
+                }
+                if (announcementJson.success && announcementJson.data) {
+                    const ann = mapDbAnnouncement(announcementJson.data);
+                    if (ann.instruments.includes(params.instrument as string)) {
+                        setCurrentAnnouncement(ann);
+                    }
+                }
+            })
+            .catch(console.error)
+            .finally(() => setIsLoading(false));
+    }, [params.instrument]);
+
+    if (isLoading) {
+        return (
+            <>
+                <Navbar />
+                <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+                </div>
+            </>
+        );
+    }
 
     if (!instrument) {
         return (
@@ -25,15 +115,8 @@ export default function InstrumentDetailPage() {
         );
     }
 
-    const currentMonth = "2026-03";
-    const currentAnnouncement = monthlyAnnouncements.find(
-        (a) => a.month === currentMonth && a.instruments.includes(instrument.id)
-    );
-
     const handleSelectPackage = (pkg: PackageType) => {
-        // Navigate to checkout page (to be implemented)
         console.log("Selected package:", pkg);
-        // For MVP, we'll just log it
     };
 
     return (
@@ -209,7 +292,7 @@ export default function InstrumentDetailPage() {
                                 </p>
                                 {instrument.rentalOffsetAllowed && (
                                     <p className="text-blue-300 text-sm">
-                                        ✓ 租借費用可折抵購買樂器費用（限租借期間內）
+                                        租借費用可折抵購買樂器費用（限租借期間內）
                                     </p>
                                 )}
                             </div>
@@ -290,7 +373,7 @@ export default function InstrumentDetailPage() {
                                 </p>
                             </div>
 
-                            {/* Formation Policy (if any package requires formation) */}
+                            {/* Formation Policy */}
                             {instrument.levels.some((level) =>
                                 level.packages.some((pkg) => pkg.formationRequired)
                             ) && (

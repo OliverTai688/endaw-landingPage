@@ -1,7 +1,6 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { products } from "@/data/products";
 import Image from "next/image";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { ChevronRight, Star, Shield, Package, Sparkles } from "lucide-react";
@@ -9,10 +8,37 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import Link from "next/link";
 
+interface ProductImage {
+  url: string;
+  alt: string | null;
+  sortOrder: number;
+  isPrimary: boolean;
+}
+
+interface ProductSpec {
+  label: string;
+  value: string;
+  sortOrder: number;
+}
+
+interface ProductData {
+  id: string;
+  slug: string;
+  name: string;
+  slogan: string | null;
+  shortDescription: string | null;
+  description: string;
+  price: number;
+  currency: string;
+  images: ProductImage[];
+  specs: ProductSpec[];
+}
+
 export default function ProductDetailPage() {
     const { id } = useParams();
-    const product = products.find((p) => p.id === id);
-    const [mainImg, setMainImg] = useState(product?.images[0]);
+    const [product, setProduct] = useState<ProductData | null>(null);
+    const [isNotFound, setIsNotFound] = useState(false);
+    const [mainImg, setMainImg] = useState<string | undefined>();
     const [isHovering, setIsHovering] = useState(false);
     const [imagesLoaded, setImagesLoaded] = useState<{ [key: string]: boolean }>({});
     const [mainImageLoaded, setMainImageLoaded] = useState(false);
@@ -20,6 +46,22 @@ export default function ProductDetailPage() {
 
     const { scrollYProgress } = useScroll();
     const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0.3]);
+
+    // Fetch product by slug
+    useEffect(() => {
+        if (!id) return;
+        fetch(`/api/bff/v1/products?slug=${id}`)
+            .then(res => res.json())
+            .then(json => {
+                if (json.success && json.data) {
+                    setProduct(json.data);
+                    setMainImg(json.data.images?.[0]?.url);
+                } else {
+                    setIsNotFound(true);
+                }
+            })
+            .catch(() => setIsNotFound(true));
+    }, [id]);
 
     // Initial loading animation
     useEffect(() => {
@@ -34,16 +76,32 @@ export default function ProductDetailPage() {
         setImagesLoaded((prev) => ({ ...prev, [imgSrc]: true }));
     };
 
-    if (!product) {
+    if (isNotFound) {
         return (
             <div className="min-h-screen bg-black flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 border-2 border-gold/30 border-t-gold rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-gray-500 font-light tracking-wider">Product not found</p>
                 </div>
             </div>
         );
     }
+
+    if (!product) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-2 border-gold/30 border-t-gold rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-gray-500 font-light tracking-wider">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    const imageUrls = product.images.map(img => img.url);
+    const formatSpec = (spec: ProductSpec) => {
+        if (spec.label) return `${spec.label} — ${spec.value}`;
+        return spec.value;
+    };
 
     return (
         <>
@@ -105,7 +163,9 @@ export default function ProductDetailPage() {
                             <Link href="/home">Home</Link>
                         </span>
                         <ChevronRight size={12} className="text-gray-700" />
-                        <span className="text-gray-600 hover:text-gold/70 transition-colors cursor-pointer">Products</span>
+                        <span className="text-gray-600 hover:text-gold/70 transition-colors cursor-pointer">
+                            <Link href="/products">Products</Link>
+                        </span>
                         <ChevronRight size={12} className="text-gray-700" />
                         <span className="text-gold/90">{product.name}</span>
                     </motion.div>
@@ -146,39 +206,39 @@ export default function ProductDetailPage() {
                                         </div>
                                     )}
 
-                                    <Image
-                                        src={mainImg!}
-                                        alt={product.name}
-                                        fill
-                                        priority
-                                        className="object-cover transition-all duration-700 ease-out"
-                                        style={{
-                                            transform: isHovering ? "scale(1.05)" : "scale(1)",
-                                            opacity: mainImageLoaded ? 1 : 0,
-                                        }}
-                                        onLoadingComplete={() => setMainImageLoaded(true)}
-                                    />
+                                    {mainImg && (
+                                        <Image
+                                            src={mainImg}
+                                            alt={product.name}
+                                            fill
+                                            priority
+                                            className="object-cover transition-all duration-700 ease-out"
+                                            style={{
+                                                transform: isHovering ? "scale(1.05)" : "scale(1)",
+                                                opacity: mainImageLoaded ? 1 : 0,
+                                            }}
+                                            onLoadingComplete={() => setMainImageLoaded(true)}
+                                        />
+                                    )}
 
                                     {/* Subtle vignette */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                                 </motion.div>
                             </motion.div>
 
-                            {/* Thumbnail Gallery - Optimized for 19 images */}
+                            {/* Thumbnail Gallery */}
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.6, delay: 0.2 }}
                                 className="mt-6"
                             >
-                                {/* Scrollable container for many thumbnails */}
                                 <div className="relative">
-                                    {/* Gradient fade on edges */}
                                     <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-black to-transparent z-10 pointer-events-none" />
                                     <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-black to-transparent z-10 pointer-events-none" />
 
                                     <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2 scroll-smooth">
-                                        {product.images.map((img, idx) => (
+                                        {imageUrls.map((img, idx) => (
                                             <motion.button
                                                 key={img}
                                                 onClick={() => {
@@ -193,7 +253,6 @@ export default function ProductDetailPage() {
                                                     : "border-gray-800 hover:border-gold/40"
                                                     }`}
                                             >
-                                                {/* Loading skeleton for thumbnails */}
                                                 {!imagesLoaded[img] && (
                                                     <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-950 animate-pulse">
                                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent animate-shimmer-fast" />
@@ -217,7 +276,6 @@ export default function ProductDetailPage() {
                                                     />
                                                 )}
 
-                                                {/* Image number badge */}
                                                 <div className="absolute top-1 right-1 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded-sm">
                                                     <span className="text-[9px] text-white font-light">
                                                         {String(idx + 1).padStart(2, '0')}
@@ -228,9 +286,8 @@ export default function ProductDetailPage() {
                                     </div>
                                 </div>
 
-                                {/* Image counter */}
                                 <p className="text-center text-xs text-gray-600 mt-4 font-light tracking-wider">
-                                    {product.images.length} Images Available
+                                    {imageUrls.length} Images Available
                                 </p>
                             </motion.div>
                         </div>
@@ -256,7 +313,6 @@ export default function ProductDetailPage() {
                                     {product.slogan}
                                 </p>
 
-                                {/* Divider */}
                                 <div className="w-16 h-px bg-gradient-to-r from-gold to-transparent mb-8" />
                             </motion.div>
 
@@ -268,7 +324,7 @@ export default function ProductDetailPage() {
                                 className="mb-10"
                             >
                                 <p className="text-3xl lg:text-4xl font-light text-gold tracking-wide">
-                                    {product.price}
+                                    ${product.price} {product.currency}
                                 </p>
                             </motion.div>
 
@@ -295,7 +351,7 @@ export default function ProductDetailPage() {
                                     Distinguished Features
                                 </h3>
                                 <div className="space-y-4">
-                                    {product.specs.map((feature, i) => (
+                                    {product.specs.map((spec, i) => (
                                         <motion.div
                                             key={i}
                                             initial={{ opacity: 0, x: -10 }}
@@ -305,7 +361,7 @@ export default function ProductDetailPage() {
                                         >
                                             <div className="w-1 h-1 mt-2 bg-gold rounded-full group-hover:scale-150 transition-transform duration-300" />
                                             <span className="text-gray-300 text-sm font-light leading-relaxed flex-1 group-hover:text-gray-100 transition-colors duration-300">
-                                                {feature}
+                                                {formatSpec(spec)}
                                             </span>
                                         </motion.div>
                                     ))}
@@ -370,11 +426,11 @@ export default function ProductDetailPage() {
 
                 <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500&family=Montserrat:wght@300;400;500&display=swap');
-        
+
         body {
           font-family: 'Montserrat', sans-serif;
         }
-        
+
         h1, h2, h3 {
           font-family: 'Cormorant Garamond', serif;
         }
@@ -410,7 +466,7 @@ export default function ProductDetailPage() {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-        
+
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }

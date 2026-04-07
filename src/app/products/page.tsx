@@ -3,15 +3,37 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/data/products";
 import { Sparkles, Star, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
+
+interface ProductData {
+  id: string;
+  slug: string;
+  name: string;
+  slogan: string | null;
+  shortDescription: string | null;
+  price: number;
+  currency: string;
+  images: { url: string; alt: string | null }[];
+}
 
 export default function ProductsPage() {
   const { scrollYProgress } = useScroll();
   const opacity = useTransform(scrollYProgress, [0, 0.2], [1, 0.3]);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [products, setProducts] = useState<ProductData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/bff/v1/products')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) setProducts(json.data);
+      })
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <>
@@ -60,7 +82,7 @@ export default function ProductsPage() {
             >
               <Sparkles className="text-gold" size={20} />
             </motion.div>
-            
+
             <h1 className="text-5xl md:text-6xl font-light tracking-tight mb-4">
               Premium Collection
             </h1>
@@ -79,7 +101,11 @@ export default function ProductsPage() {
 
           {/* Product Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-            {products.map((product, index) => (
+            {isLoading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="aspect-[3/4] bg-gray-900 rounded-lg animate-pulse" />
+                ))
+              : products.map((product, index) => (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 30 }}
@@ -88,7 +114,7 @@ export default function ProductsPage() {
                 onHoverStart={() => setHoveredIndex(index)}
                 onHoverEnd={() => setHoveredIndex(null)}
               >
-                <Link href={`/products/${product.id}`}>
+                <Link href={`/products/${product.slug}`}>
                   <div className="group relative bg-gradient-to-br from-gray-900 to-black rounded-lg overflow-hidden border border-gray-800 hover:border-gold/40 transition-all duration-500">
                     {/* Decorative corner accents */}
                     <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-gold/20 rounded-tl-lg" />
@@ -98,7 +124,7 @@ export default function ProductsPage() {
                     <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900">
                       {/* Gradient overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10" />
-                      
+
                       {/* Grain texture */}
                       <div
                         className="absolute inset-0 opacity-[0.03] z-10"
@@ -107,12 +133,14 @@ export default function ProductsPage() {
                         }}
                       />
 
-                      <Image
-                        src={product.images[0]}
-                        alt={product.name}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-700"
-                      />
+                      {product.images[0] && (
+                        <Image
+                          src={product.images[0].url}
+                          alt={product.images[0].alt || product.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-700"
+                        />
+                      )}
 
                       {/* Product number badge */}
                       <div className="absolute top-4 right-4 z-20 bg-black/50 backdrop-blur-sm border border-gold/30 rounded px-3 py-1 text-xs text-gold font-light">
@@ -137,14 +165,14 @@ export default function ProductsPage() {
 
                       {/* Price and Slogan */}
                       <div className="flex items-center justify-between">
-                        <span className="text-gold font-light text-lg">{product.price}</span>
+                        <span className="text-gold font-light text-lg">${product.price} {product.currency}</span>
                         <span className="text-xs text-gray-500 italic">{product.slogan}</span>
                       </div>
 
                       {/* Hover indicator */}
                       <motion.div
                         initial={{ opacity: 0, x: -10 }}
-                        animate={{ 
+                        animate={{
                           opacity: hoveredIndex === index ? 1 : 0,
                           x: hoveredIndex === index ? 0 : -10
                         }}

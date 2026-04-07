@@ -34,4 +34,8 @@ export class ContentService {
 
         return this.setStatus(id, newStatus);
     }
+
+    async findById(id: string): Promise<ContentEntity | null> {
+        return this.repository.findById(id);
+    }
 }

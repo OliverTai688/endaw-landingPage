@@ -4,23 +4,94 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { Calendar, MapPin, Users, Clock, User, AlertCircle, ChevronRight } from "lucide-react";
+import { Calendar, MapPin, Users, Clock, AlertCircle, ChevronRight } from "lucide-react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { CountdownTimer } from "@/components/shared/countdown-timer";
 import { FAQAccordion } from "@/components/shared/faq-accordion";
-import { workshops, workshopFAQs } from "@/data/workshops";
+import { workshopFAQs } from "@/data/workshops";
 import FeedbackOverlay from "@/components/admin/FeedbackOverlay";
+import { useState, useEffect } from "react";
+
+interface WorkshopData {
+    id: string;
+    title: string;
+    subtitle: string;
+    description: string;
+    coverImage: string;
+    price: number;
+    tags: string[];
+    galleryImages: string[];
+    instructor: { name: string; bio: string; avatar: string };
+    schedule: { date: Date; location: string; duration: string };
+    capacity: { total: number; remaining: number };
+    registrationDeadline: Date;
+    policies: { attendanceRules: string; refundPolicy: string };
+}
+
+function mapContentToWorkshop(content: any): WorkshopData {
+    const meta = content.metadata || {};
+    return {
+        id: content.id,
+        title: content.title,
+        subtitle: content.subtitle || "",
+        description: content.description,
+        coverImage: content.coverImage,
+        price: content.price,
+        tags: content.tags || [],
+        galleryImages: meta.galleryImages || [],
+        instructor: meta.instructor || { name: "", bio: "", avatar: "" },
+        schedule: {
+            date: meta.schedule?.date ? new Date(meta.schedule.date) : new Date(),
+            location: meta.schedule?.location || content.workshop?.location || "",
+            duration: meta.schedule?.duration || content.workshop?.duration || "",
+        },
+        capacity: {
+            total: meta.capacity?.total || content.workshop?.totalCap || 0,
+            remaining: meta.capacity?.remaining || content.workshop?.remCap || 0,
+        },
+        registrationDeadline: meta.registrationDeadline ? new Date(meta.registrationDeadline) : new Date(),
+        policies: meta.policies || { attendanceRules: "", refundPolicy: "" },
+    };
+}
 
 export default function WorkshopDetailPage() {
     const params = useParams();
-    const workshop = workshops.find((w) => w.id === params.id);
+    const [workshop, setWorkshop] = useState<WorkshopData | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (!params.id) return;
+        fetch(`/api/bff/v1/workshops?id=${params.id}`)
+            .then((res) => res.json())
+            .then((json) => {
+                if (json.success && json.data) {
+                    setWorkshop(mapContentToWorkshop(json.data));
+                }
+            })
+            .catch(console.error)
+            .finally(() => setIsLoading(false));
+    }, [params.id]);
+
+    if (isLoading) {
+        return (
+            <>
+                <Navbar />
+                <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+                </div>
+            </>
+        );
+    }
 
     if (!workshop) {
         return (
-            <div className="min-h-screen bg-black text-white flex items-center justify-center">
-                <p>工作坊不存在</p>
-            </div>
+            <>
+                <Navbar />
+                <div className="min-h-screen bg-black text-white flex items-center justify-center">
+                    <p>工作坊不存在</p>
+                </div>
+            </>
         );
     }
 
@@ -346,7 +417,7 @@ export default function WorkshopDetailPage() {
 
                                     {isAlmostFull && !isFull && (
                                         <p className="text-xs text-orange-300 text-center mt-3">
-                                            ⚠️ 名額即將額滿！
+                                            名額即將額滿！
                                         </p>
                                     )}
                                 </div>

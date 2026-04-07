@@ -1,10 +1,12 @@
 import { IContentRepository } from "./repositories/IContentRepository";
 import { WebContentRepository } from "./repositories/WebContentRepository";
+import { IAnnouncementRepository } from "./repositories/IAnnouncementRepository";
 
 export class RepositoryFactory {
     private static inMemoryInstance: IContentRepository | null = null;
     private static prismaInstance: IContentRepository | null = null;
     private static webInstance: WebContentRepository | null = null;
+    private static announcementInstance: IAnnouncementRepository | null = null;
 
     static async isDatabaseConnected(): Promise<boolean> {
         // Safe check for both client and server
@@ -49,5 +51,13 @@ export class RepositoryFactory {
             this.inMemoryInstance = new InMemoryContentRepository();
         }
         return this.inMemoryInstance;
+    }
+
+    static async getAnnouncementRepository(): Promise<IAnnouncementRepository> {
+        if (!this.announcementInstance) {
+            const { PrismaAnnouncementRepository } = await import("./repositories/PrismaAnnouncementRepository");
+            this.announcementInstance = new PrismaAnnouncementRepository();
+        }
+        return this.announcementInstance;
     }
 }

@@ -6,6 +6,10 @@ datasource db {
   provider = "postgresql"
 }
 
+// ============================================================
+// Enums
+// ============================================================
+
 enum ContentType {
   WORKSHOP
   MUSIC
@@ -16,6 +20,54 @@ enum PublishStatus {
   PUBLISHED
   ARCHIVED
 }
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum OrderType {
+  WORKSHOP
+  MUSIC
+  PRODUCT
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  PROCESSED
+  REJECTED
+}
+
+enum AdjustmentType {
+  INBOUND
+  OUTBOUND
+  CORRECTION
+  RETURN
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// ============================================================
+// Content Management (existing)
+// ============================================================
 
 model Content {
   id            String        @id @default(cuid())
@@ -34,6 +86,7 @@ model Content {
   // Relationships
   workshop      Workshop?
   music         MusicMetadata?
+  revisions     ContentRevision[]
 }
 
 model Workshop {
@@ -55,4 +108,246 @@ model MusicMetadata {
   equipmentDescription  String?
   rentalAvailable       Boolean  @default(false)
   rentalOffsetAllowed   Boolean  @default(false)
+}
+
+// ============================================================
+// Products
+// ============================================================
+
+model Product {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  name             String
+  slogan           String?
+  shortDescription String?
+  description      String           @db.Text
+  price            Int
+  currency         String           @default("USD")
+  status           ProductStatus    @default(DRAFT)
+  images           ProductImage[]
+  variants         ProductVariant[]
+  specs            ProductSpec[]
+  orderItems       OrderItem[]
+  inventory        ProductInventory?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      String
+  value     String
+  priceAdj  Int     @default(0)
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  sortOrder Int     @default(0)
+}
+
+// ============================================================
+// Orders & Customers
+// ============================================================
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  notes     String?  @db.Text
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique
+  orderType       OrderType
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  workshopId      String?
+  musicPackageId  String?
+  productItems    OrderItem[]
+  subtotal        Int
+  currency        String        @default("TWD")
+  discount        Int           @default(0)
+  totalAmount     Int
+  status          OrderStatus   @default(PENDING_PAYMENT)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   String?
+  shippingAddress String?       @db.Text
+  trackingNumber  String?
+  transactionId   String?
+  paidAt          DateTime?
+  adminNotes      String?       @db.Text
+  refunds         Refund[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product @relation(fields: [productId], references: [id])
+  quantity   Int     @default(1)
+  unitPrice  Int
+  variant    String?
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id])
+  amount      Int
+  reason      String       @db.Text
+  status      RefundStatus @default(PENDING)
+  processedBy String?
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+}
+
+// ============================================================
+// Inventory
+// ============================================================
+
+model ProductInventory {
+  id           String            @id @default(cuid())
+  productId    String            @unique
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  currentStock Int               @default(0)
+  lowThreshold Int               @default(5)
+  adjustments  StockAdjustment[]
+  updatedAt    DateTime          @updatedAt
+}
+
+model StockAdjustment {
+  id          String           @id @default(cuid())
+  inventoryId String
+  inventory   ProductInventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  type        AdjustmentType
+  quantity    Int
+  reason      String?
+  adjustedBy  String?
+  createdAt   DateTime         @default(now())
+}
+
+// ============================================================
+// Music Instruments & Packages
+// ============================================================
+
+model Instructor {
+  id        String   @id @default(cuid())
+  name      String
+  bio       String?  @db.Text
+  avatar    String?
+  createdAt DateTime @default(now())
+}
+
+model MusicInstrument {
+  id                   String       @id @default(cuid())
+  name                 String
+  nameEn               String       @unique
+  coverImage           String
+  description          String       @db.Text
+  containsEquipment    Boolean      @default(false)
+  equipmentDescription String?
+  rentalAvailable      Boolean      @default(false)
+  rentalOffsetAllowed  Boolean      @default(false)
+  levels               MusicLevel[]
+  faqs                 MusicFAQ[]
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model MusicLevel {
+  id           String          @id @default(cuid())
+  instrumentId String
+  instrument   MusicInstrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  name         String
+  sortOrder    Int             @default(0)
+  packages     MusicPackage[]
+}
+
+model MusicPackage {
+  id                     String        @id @default(cuid())
+  levelId                String
+  level                  MusicLevel    @relation(fields: [levelId], references: [id], onDelete: Cascade)
+  name                   String
+  lessonCount            Int
+  bonusLessons           Int           @default(0)
+  validDuration          Int
+  firstClassDate         DateTime?
+  registrationStartDates DateTime[]
+  formationRequired      Boolean       @default(false)
+  formationDecisionDays  Int           @default(0)
+  refundPolicy           String        @db.Text
+  price                  Int
+  status                 PublishStatus @default(DRAFT)
+  includedEquipment      String[]
+  highlights             String[]
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+}
+
+model MusicFAQ {
+  id           String          @id @default(cuid())
+  instrumentId String
+  instrument   MusicInstrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  question     String
+  answer       String          @db.Text
+  sortOrder    Int             @default(0)
+}
+
+// ============================================================
+// Announcements & Banners
+// ============================================================
+
+model MonthlyAnnouncement {
+  id            String   @id @default(cuid())
+  month         String   @unique
+  instrumentIds String[]
+  schedule      Json
+  announcements String[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String?
+  subtitle  String?
+  imageUrl  String
+  linkUrl   String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ContentRevision {
+  id        String   @id @default(cuid())
+  contentId String
+  content   Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  data      Json
+  editedBy  String?
+  createdAt DateTime @default(now())
 }

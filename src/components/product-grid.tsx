@@ -3,10 +3,32 @@
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/data/products";
 import { Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
+
+interface ProductData {
+  id: string;
+  slug: string;
+  name: string;
+  slogan: string | null;
+  shortDescription: string | null;
+  images: { url: string; alt: string | null }[];
+}
 
 export default function ProductGrid() {
+  const [products, setProducts] = useState<ProductData[]>([]);
+
+  useEffect(() => {
+    fetch('/api/bff/v1/products')
+      .then(res => res.json())
+      .then(json => {
+        if (json.success) setProducts(json.data);
+      })
+      .catch(console.error);
+  }, []);
+
+  if (products.length === 0) return null;
+
   return (
     <section className="relative max-w-7xl mx-auto px-6 lg:px-12 py-24 lg:py-32">
       {/* Background decoration */}
@@ -34,9 +56,9 @@ export default function ProductGrid() {
         <h2 className="text-4xl lg:text-5xl font-light text-white mb-4 tracking-tight">
           Featured Products
         </h2>
-        
+
         <div className="w-24 h-px bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-6" />
-        
+
         <p className="text-sm tracking-[0.2em] uppercase text-gray-500 font-light">
           Curated Collection
         </p>
@@ -45,7 +67,7 @@ export default function ProductGrid() {
       {/* Product Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
         {products.map((p, i) => (
-          <Link key={p.id} href={`/products/${p.id}`} className="block group">
+          <Link key={p.id} href={`/products/${p.slug}`} className="block group">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -61,23 +83,25 @@ export default function ProductGrid() {
               <div className="relative h-full bg-gradient-to-br from-gray-950 to-black rounded-sm overflow-hidden border border-gold/20 hover:border-gold/50 transition-all duration-500 group-hover:shadow-2xl group-hover:shadow-gold/10">
                 {/* Decorative corner accent - top left */}
                 <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-gold/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
-                
+
                 {/* Decorative corner accent - bottom right */}
                 <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-gold/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-10" />
 
                 {/* Product Image Container */}
                 <div className="relative aspect-square w-full bg-black overflow-hidden">
-                  <Image
-                    src={p.images[0]}
-                    alt={p.name}
-                    width={500}
-                    height={500}
-                    className="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-110"
-                  />
-                  
+                  {p.images[0] && (
+                    <Image
+                      src={p.images[0].url}
+                      alt={p.images[0].alt || p.name}
+                      width={500}
+                      height={500}
+                      className="object-cover w-full h-full transition-transform duration-700 ease-out group-hover:scale-110"
+                    />
+                  )}
+
                   {/* Gradient overlay */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  
+
                   {/* Grain texture */}
                   <div className="absolute inset-0 opacity-[0.02] bg-noise mix-blend-overlay" />
                 </div>

@@ -6,82 +6,93 @@ import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { InstrumentCard } from "@/components/music/instrument-card";
 import { FAQAccordion } from "@/components/shared/faq-accordion";
-import { instruments, musicCommonFAQs, monthlyAnnouncements } from "@/data/music";
+import { musicCommonFAQs } from "@/data/music";
 import FeedbackOverlay from "@/components/admin/FeedbackOverlay";
 
 import { useEffect, useState } from "react";
-import { useContent } from "@/components/providers/ContentProvider";
-import { ContentType, ContentEntity, PublishStatus } from "@/domain/models/Content";
+import type { Instrument, MonthlyAnnouncement } from "@/lib/types";
+
+function mapDbInstrument(data: any): Instrument {
+    return {
+        id: data.id,
+        name: data.name,
+        nameEn: data.nameEn,
+        coverImage: data.coverImage,
+        description: data.description,
+        containsEquipment: data.containsEquipment,
+        equipmentDescription: data.equipmentDescription || undefined,
+        rentalAvailable: data.rentalAvailable,
+        rentalOffsetAllowed: data.rentalOffsetAllowed,
+        levels: (data.levels || []).map((level: any) => ({
+            id: level.id,
+            name: level.name,
+            packages: (level.packages || []).map((pkg: any) => ({
+                id: pkg.id,
+                name: pkg.name,
+                lessonCount: pkg.lessonCount,
+                bonusLessons: pkg.bonusLessons,
+                validDuration: pkg.validDuration,
+                firstClassDate: pkg.firstClassDate ? new Date(pkg.firstClassDate) : new Date(),
+                registrationStartDates: (pkg.registrationStartDates || []).map((d: string) => new Date(d)),
+                formationRequired: pkg.formationRequired,
+                formationDecisionDays: pkg.formationDecisionDays,
+                refundPolicy: pkg.refundPolicy,
+                price: pkg.price,
+                status: pkg.status === "PUBLISHED" ? "published" as const : "draft" as const,
+                includedEquipment: pkg.includedEquipment || [],
+                highlights: pkg.highlights || [],
+            })),
+        })),
+        faqs: (data.faqs || []).map((faq: any) => ({
+            question: faq.question,
+            answer: faq.answer,
+        })),
+    };
+}
+
+function mapDbAnnouncement(data: any): MonthlyAnnouncement {
+    return {
+        id: data.id,
+        month: data.month,
+        instruments: data.instrumentIds || [],
+        schedule: (data.schedule || []).map((s: any) => ({
+            date: new Date(s.date),
+            time: s.time,
+            instructor: s.instructor,
+            type: s.type,
+        })),
+        announcements: data.announcements || [],
+    };
+}
 
 export default function MusicPage() {
-    const { refreshContent } = useContent();
-    const [displayInstruments, setDisplayInstruments] = useState<any[]>(instruments);
-    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    const [displayInstruments, setDisplayInstruments] = useState<Instrument[]>([]);
+    const [currentAnnouncement, setCurrentAnnouncement] = useState<MonthlyAnnouncement | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const currentMonth = "2026-03";
-    const currentAnnouncement = monthlyAnnouncements.find(
-        (a) => a.month === currentMonth
-    );
 
     useEffect(() => {
-        const checkPreview = () => {
-            const cookies = document.cookie.split('; ');
-            const authCookie = cookies.find(row => row.startsWith('internal_access='));
-            const urlParams = new URLSearchParams(window.location.search);
-            const hasPreviewParam = urlParams.get('preview') === 'true';
-
-            if ((authCookie && authCookie.split('=')[1] === 'true') || hasPreviewParam) {
-                setIsPreviewMode(true);
-                return true;
-            }
-            return false;
-        };
-
-        async function load() {
-            const showAll = checkPreview();
-            const dynamicItems = await refreshContent(ContentType.MUSIC);
-
-            const filteredItems = dynamicItems
-                .filter(item => showAll || item.publishStatus === PublishStatus.PUBLISHED)
-                .map(item => ({
-                    id: item.id,
-                    name: item.title,
-                    nameEn: item.metadata?.nameEn || item.id,
-                    description: item.description,
-                    coverImage: item.coverImage,
-                    price: item.price,
-                    containsEquipment: item.metadata?.containsEquipment || false,
-                    equipmentDescription: item.metadata?.equipmentDescription || "",
-                    rentalAvailable: item.metadata?.rentalAvailable || false,
-                    rentalOffsetAllowed: item.metadata?.rentalOffsetAllowed || false,
-                    // Robust mapping for InstrumentCard
-                    levels: item.metadata?.levels || [
-                        {
-                            id: `${item.id}-beginner`,
-                            name: "基礎課程",
-                            packages: [{ id: `${item.id}-pkg`, name: "入門套票", price: item.price, lessonCount: 4 }]
-                        }
-                    ],
-                    faqs: item.metadata?.faqs || []
-                }));
-
-            if (filteredItems.length > 0) {
-                setDisplayInstruments([...filteredItems, ...instruments]);
-            }
-        }
-        load();
-    }, [refreshContent]);
+        Promise.all([
+            fetch("/api/bff/v1/music").then((r) => r.json()),
+            fetch(`/api/bff/v1/music?type=announcements&month=${currentMonth}`).then((r) => r.json()),
+        ])
+            .then(([instrumentsJson, announcementJson]) => {
+                if (instrumentsJson.success && instrumentsJson.data) {
+                    setDisplayInstruments(instrumentsJson.data.map(mapDbInstrument));
+                }
+                if (announcementJson.success && announcementJson.data) {
+                    setCurrentAnnouncement(mapDbAnnouncement(announcementJson.data));
+                }
+            })
+            .catch(console.error)
+            .finally(() => setIsLoading(false));
+    }, []);
 
     return (
         <FeedbackOverlay pageName="樂器訓練所">
-            {isPreviewMode && (
-                <div className="fixed top-0 left-0 right-0 z-[100] bg-blue-500/90 text-white text-[10px] uppercase tracking-[0.2em] font-bold py-1 text-center backdrop-blur-md shadow-lg">
-                    Preview Mode Active &bull; Showing Drafts and Published Content
-                </div>
-            )}
             <Navbar />
             <div className="min-h-screen bg-black text-white relative overflow-hidden">
-                {/* ... background and header ... */}
                 <div className="fixed inset-0 opacity-30">
                     <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
                     <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
@@ -127,7 +138,7 @@ export default function MusicPage() {
                         />
                     </motion.div>
 
-                    {/* Monthly Announcement Banner ... */}
+                    {/* Monthly Announcement Banner */}
                     {currentAnnouncement && currentAnnouncement.announcements.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
@@ -158,9 +169,13 @@ export default function MusicPage() {
 
                     {/* Instruments Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-32">
-                        {displayInstruments.map((instrument, index) => (
-                            <InstrumentCard key={instrument.id} instrument={instrument} index={index} />
-                        ))}
+                        {isLoading
+                            ? Array.from({ length: 4 }).map((_, i) => (
+                                <div key={i} className="aspect-[3/4] bg-gray-900 rounded-lg animate-pulse" />
+                            ))
+                            : displayInstruments.map((instrument, index) => (
+                                <InstrumentCard key={instrument.id} instrument={instrument} index={index} />
+                            ))}
                     </div>
 
                     {/* Policy Highlight Section */}
