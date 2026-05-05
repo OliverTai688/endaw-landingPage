@@ -444,7 +444,6 @@ export function ProductManager() {
                                                 label={`圖片 ${i + 1}`}
                                                 value={img.url}
                                                 onChange={(url) => updateImage(i, { url })}
-                                                showPreview={false}
                                             />
                                             <div className="flex gap-2">
                                                 <input

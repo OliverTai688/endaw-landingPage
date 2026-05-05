@@ -387,7 +387,7 @@ export function WorkshopManager() {
                                         <input type="text" value={form.instructor.name} onChange={(e) => updateField('instructor', { ...form.instructor, name: e.target.value })} placeholder="姓名" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
                                     <div>
-                                        <ImageUploadField label="講師頭像" value={form.instructor.avatar} onChange={(url) => updateField('instructor', { ...form.instructor, avatar: url })} previewClassName="w-14 h-14 rounded-full" />
+                                        <ImageUploadField label="講師頭像" value={form.instructor.avatar} onChange={(url) => updateField('instructor', { ...form.instructor, avatar: url })} />
                                     </div>
                                     <Field label="講師介紹" className="col-span-2">
                                         <textarea value={form.instructor.bio} onChange={(e) => updateField('instructor', { ...form.instructor, bio: e.target.value })} rows={3} placeholder="講師簡介" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors resize-none" />
@@ -433,7 +433,7 @@ export function WorkshopManager() {
                                 {form.galleryImages.map((url, i) => (
                                     <div key={i} className="flex items-start gap-3">
                                         <div className="flex-1">
-                                            <ImageUploadField label={`圖片 ${i + 1}`} value={url} onChange={(val) => updateGalleryImage(i, val)} previewClassName="w-16 h-16" />
+                                            <ImageUploadField label={`圖片 ${i + 1}`} value={url} onChange={(val) => updateGalleryImage(i, val)} />
                                         </div>
                                         <button onClick={() => removeGalleryImage(i)} className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors flex-shrink-0 mt-5">
                                             <Trash2 size={14} />
