@@ -13,6 +13,33 @@ const UpdateOrderSchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      const order = await prisma.order.findUnique({
+        where: { id },
+        include: {
+          customer: true,
+          productItems: {
+            include: {
+              product: {
+                select: { name: true, slug: true }
+              }
+            }
+          },
+          payments: {
+            orderBy: { createdAt: 'desc' }
+          }
+        },
+      });
+
+      if (!order) {
+        return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, data: order });
+    }
+
     const status = searchParams.get('status') as OrderStatus | null;
     const limit = parseInt(searchParams.get('limit') || '20');
     const page = parseInt(searchParams.get('page') || '1');

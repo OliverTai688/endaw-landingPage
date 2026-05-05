@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft,
@@ -15,93 +15,51 @@ import {
     Send,
     MessageSquare,
     Clock,
+    Hash,
+    ExternalLink,
+    ChevronDown,
 } from "lucide-react";
+import { OrderStatus, PaymentStatus } from "@prisma/client";
+import { useOrders } from "@/components/providers/OrderProvider";
 
-type OrderStatus = "COMPLETED" | "PENDING" | "REFUNDED";
-
-interface OrderItem {
-    name: string;
-    quantity: number;
-    unitPrice: number;
-}
-
-interface OrderNote {
+interface Payment {
     id: string;
-    content: string;
-    author: string;
-    date: string;
+    merchantTradeNo: string;
+    ecpayTradeNo: string | null;
+    paymentMethod: string | null;
+    paymentStatus: PaymentStatus;
+    totalAmount: number;
+    rtnCode: string | null;
+    rtnMsg: string | null;
+    rawCallback: any;
+    paidAt: string | null;
+    createdAt: string;
 }
-
-interface OrderDetail {
-    id: string;
-    orderNumber: string;
-    status: OrderStatus;
-    type: string;
-    date: string;
-    paymentMethod: string;
-    customer: {
-        name: string;
-        email: string;
-        phone: string;
-    };
-    items: OrderItem[];
-    notes: OrderNote[];
-    refundHistory: { date: string; amount: number; reason: string }[];
-}
-
-const mockOrderData: Record<string, OrderDetail> = {
-    "ord-001": {
-        id: "ord-001",
-        orderNumber: "ORD-2026-0001",
-        status: "COMPLETED",
-        type: "工作坊",
-        date: "2026-03-15",
-        paymentMethod: "信用卡",
-        customer: { name: "林小明", email: "ming@example.com", phone: "0912-345-678" },
-        items: [{ name: "手碟體驗工作坊 - 三月場", quantity: 1, unitPrice: 2800 }],
-        notes: [
-            { id: "n1", content: "客戶要求安排靠窗座位", author: "Admin", date: "2026-03-14 10:30" },
-        ],
-        refundHistory: [],
-    },
-    "ord-002": {
-        id: "ord-002",
-        orderNumber: "ORD-2026-0002",
-        status: "PENDING",
-        type: "樂器課",
-        date: "2026-03-18",
-        paymentMethod: "銀行轉帳",
-        customer: { name: "陳美玲", email: "meiling@example.com", phone: "0923-456-789" },
-        items: [{ name: "手碟基礎課程 - 四堂", quantity: 1, unitPrice: 4500 }],
-        notes: [],
-        refundHistory: [],
-    },
-    "ord-004": {
-        id: "ord-004",
-        orderNumber: "ORD-2026-0004",
-        status: "REFUNDED",
-        type: "工作坊",
-        date: "2026-03-22",
-        paymentMethod: "信用卡",
-        customer: { name: "張雅婷", email: "yating@example.com", phone: "0934-567-890" },
-        items: [{ name: "手碟體驗工作坊 - 三月場", quantity: 1, unitPrice: 2800 }],
-        notes: [
-            { id: "n2", content: "客戶因行程衝突申請退款", author: "Admin", date: "2026-03-23 14:00" },
-        ],
-        refundHistory: [
-            { date: "2026-03-24", amount: 2800, reason: "客戶因行程衝突取消" },
-        ],
-    },
-};
 
 const statusConfig: Record<OrderStatus, { label: string; className: string }> = {
-    COMPLETED: {
-        label: "已完成",
+    PENDING_PAYMENT: {
+        label: "待付款",
+        className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    },
+    PAID: {
+        label: "已付款",
+        className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    },
+    PROCESSING: {
+        label: "處理中",
+        className: "bg-purple-500/10 text-purple-400 border border-purple-500/20",
+    },
+    SHIPPED: {
+        label: "已出貨",
+        className: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20",
+    },
+    DELIVERED: {
+        label: "已送達",
         className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
     },
-    PENDING: {
-        label: "待付款",
-        className: "bg-orange-500/10 text-orange-400 border border-orange-500/20",
+    CANCELLED: {
+        label: "已取消",
+        className: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
     },
     REFUNDED: {
         label: "已退款",
@@ -109,48 +67,69 @@ const statusConfig: Record<OrderStatus, { label: string; className: string }> = 
     },
 };
 
-function getDefaultOrder(id: string): OrderDetail {
-    return {
-        id,
-        orderNumber: `ORD-2026-${id.replace("ord-", "").padStart(4, "0")}`,
-        status: "COMPLETED",
-        type: "商品",
-        date: "2026-03-20",
-        paymentMethod: "信用卡",
-        customer: { name: "訪客", email: "guest@example.com", phone: "0900-000-000" },
-        items: [{ name: "Tributary Pebble 5", quantity: 1, unitPrice: 129 }],
-        notes: [],
-        refundHistory: [],
-    };
-}
+const paymentStatusConfig: Record<PaymentStatus, { label: string; className: string }> = {
+    PENDING: {
+        label: "等待中",
+        className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    },
+    COMPLETED: {
+        label: "成功",
+        className: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+    },
+    FAILED: {
+        label: "失敗",
+        className: "bg-red-500/10 text-red-400 border border-red-500/20",
+    },
+    REFUNDED: {
+        label: "已退款",
+        className: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+    },
+    PARTIALLY_REFUNDED: {
+        label: "部分退款",
+        className: "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20",
+    },
+};
 
 export default function OrderDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
+    const { fetchOrderById, updateStatus } = useOrders();
 
-    const order = mockOrderData[id] || getDefaultOrder(id);
-
-    const [currentStatus, setCurrentStatus] = useState<OrderStatus>(order.status);
+    const [order, setOrder] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [noteInput, setNoteInput] = useState("");
-    const [notes, setNotes] = useState<OrderNote[]>(order.notes);
+    const [expandedCallbacks, setExpandedCallbacks] = useState<Record<string, boolean>>({});
 
-    const totalAmount = order.items.reduce(
-        (sum, item) => sum + item.quantity * item.unitPrice,
-        0
-    );
-
-    const handleAddNote = () => {
-        if (!noteInput.trim()) return;
-        const newNote: OrderNote = {
-            id: `n-${Date.now()}`,
-            content: noteInput,
-            author: "Admin",
-            date: new Date().toLocaleString("zh-TW"),
+    useEffect(() => {
+        const loadOrder = async () => {
+            const data = await fetchOrderById(id);
+            if (data) setOrder(data);
+            setIsLoading(false);
         };
-        setNotes([newNote, ...notes]);
-        setNoteInput("");
+        loadOrder();
+    }, [id]);
+
+    const toggleCallback = (paymentId: string) => {
+        setExpandedCallbacks(prev => ({ ...prev, [paymentId]: !prev[paymentId] }));
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-gold/20 border-t-gold rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (!order) {
+        return (
+            <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-6">
+                <p className="text-gray-500 mb-4">找不到此訂單</p>
+                <button onClick={() => router.push("/admin/orders")} className="text-gold text-sm hover:underline">返回列表</button>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-full bg-black text-white p-6 md:p-10 relative">
@@ -184,19 +163,18 @@ export default function OrderDetailPage() {
                             {order.orderNumber}
                         </h1>
                         <p className="text-gray-500 text-xs font-light mt-1">
-                            建立於 {order.date}
+                            建立於 {new Date(order.createdAt).toLocaleString("zh-TW")}
                         </p>
                     </div>
                     <span
-                        className={`px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider font-bold ${statusConfig[currentStatus].className}`}
+                        className={`px-3 py-1.5 rounded-lg text-xs uppercase tracking-wider font-bold ${statusConfig[order.status as OrderStatus]?.className || ""}`}
                     >
-                        {statusConfig[currentStatus].label}
+                        {statusConfig[order.status as OrderStatus]?.label || order.status}
                     </span>
                 </motion.div>
 
-                {/* Two Column Layout */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Left Column - 2/3 */}
+                    {/* Left Column */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Order Info Card */}
                         <motion.div
@@ -205,36 +183,30 @@ export default function OrderDetailPage() {
                             transition={{ delay: 0.1 }}
                             className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
                         >
-                            <h2 className="text-sm font-light mb-4 flex items-center gap-2">
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
                                 <span className="w-1 h-4 bg-gold rounded-full" />
                                 訂單資訊
                             </h2>
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">
-                                        類型
-                                    </p>
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">類型</p>
                                     <div className="flex items-center gap-2 text-sm text-gray-300">
                                         <Tag size={14} className="text-gold/60" />
-                                        {order.type}
+                                        {order.orderType}
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">
-                                        日期
-                                    </p>
-                                    <div className="flex items-center gap-2 text-sm text-gray-300">
-                                        <Calendar size={14} className="text-gold/60" />
-                                        {order.date}
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">
-                                        付款方式
-                                    </p>
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">付款狀態</p>
                                     <div className="flex items-center gap-2 text-sm text-gray-300">
                                         <CreditCard size={14} className="text-gold/60" />
-                                        {order.paymentMethod}
+                                        {order.paymentStatus}
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-1">幣別</p>
+                                    <div className="flex items-center gap-2 text-sm text-gray-300">
+                                        <Hash size={14} className="text-gold/60" />
+                                        {order.currency}
                                     </div>
                                 </div>
                             </div>
@@ -247,7 +219,7 @@ export default function OrderDetailPage() {
                             transition={{ delay: 0.15 }}
                             className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
                         >
-                            <h2 className="text-sm font-light mb-4 flex items-center gap-2">
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
                                 <span className="w-1 h-4 bg-blue-400 rounded-full" />
                                 客戶資訊
                             </h2>
@@ -260,10 +232,12 @@ export default function OrderDetailPage() {
                                     <Mail size={14} className="text-gray-500" />
                                     {order.customer.email}
                                 </div>
-                                <div className="flex items-center gap-3 text-sm text-gray-300">
-                                    <Phone size={14} className="text-gray-500" />
-                                    {order.customer.phone}
-                                </div>
+                                {order.shippingAddress && (
+                                    <div className="flex items-center gap-3 text-sm text-gray-300">
+                                        <Tag size={14} className="text-gray-500" />
+                                        地址：{order.shippingAddress}
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
 
@@ -274,38 +248,126 @@ export default function OrderDetailPage() {
                             transition={{ delay: 0.2 }}
                             className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
                         >
-                            <h2 className="text-sm font-light mb-4 flex items-center gap-2">
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
                                 <span className="w-1 h-4 bg-emerald-400 rounded-full" />
                                 訂購項目
                             </h2>
                             <div className="space-y-3">
-                                {order.items.map((item, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
-                                    >
+                                {order.productItems?.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
                                         <div>
-                                            <p className="text-sm text-gray-200">{item.name}</p>
-                                            <p className="text-xs text-gray-500">
-                                                數量: {item.quantity}
-                                            </p>
+                                            <p className="text-sm text-gray-200">{item.product.name}</p>
+                                            <p className="text-xs text-gray-500">數量: {item.quantity}</p>
                                         </div>
-                                        <p className="text-sm text-gray-300">
-                                            NT${(item.quantity * item.unitPrice).toLocaleString()}
-                                        </p>
+                                        <p className="text-sm text-gray-300">NT${(item.quantity * item.unitPrice).toLocaleString()}</p>
                                     </div>
                                 ))}
                             </div>
                             <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
                                 <p className="text-sm font-medium text-gray-400">總計</p>
-                                <p className="text-lg font-light text-gold">
-                                    NT${totalAmount.toLocaleString()}
-                                </p>
+                                <p className="text-lg font-light text-gold">NT${order.totalAmount.toLocaleString()}</p>
                             </div>
+                        </motion.div>
+
+                        {/* Payment Records Section - Phase 2A */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.25 }}
+                            className="bg-zinc-900/60 backdrop-blur-md border border-gold/10 rounded-2xl p-6 overflow-hidden"
+                        >
+                            <h2 className="text-sm font-light mb-6 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-amber-400 rounded-full shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                                金流交易紀錄 (Payment Records)
+                            </h2>
+
+                            {order.payments && order.payments.length > 0 ? (
+                                <div className="space-y-4">
+                                    {order.payments.map((payment: Payment) => (
+                                        <div key={payment.id} className="bg-black/40 border border-white/5 rounded-xl p-4 transition-all hover:border-gold/20">
+                                            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-amber-400/10 p-2 rounded-lg">
+                                                        <CreditCard size={16} className="text-amber-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[10px] uppercase tracking-widest text-gray-500 mb-0.5">商店交易編號</p>
+                                                        <p className="text-xs font-mono text-gray-300">{payment.merchantTradeNo}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${paymentStatusConfig[payment.paymentStatus].className}`}>
+                                                        {paymentStatusConfig[payment.paymentStatus].label}
+                                                    </span>
+                                                    <p className="text-[10px] text-gray-500">{new Date(payment.createdAt).toLocaleString("zh-TW")}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3 text-[11px]">
+                                                <div>
+                                                    <p className="text-gray-500 mb-1">綠界交易編號</p>
+                                                    <p className="text-gray-300 font-mono truncate" title={payment.ecpayTradeNo || "N/A"}>
+                                                        {payment.ecpayTradeNo || "—"}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 mb-1">金額</p>
+                                                    <p className="text-amber-400 font-mono">NT${payment.totalAmount.toLocaleString()}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 mb-1">付款方式</p>
+                                                    <p className="text-gray-300">{payment.paymentMethod || "—"}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-gray-500 mb-1">付款時間</p>
+                                                    <p className="text-gray-300">{payment.paidAt ? new Date(payment.paidAt).toLocaleString("zh-TW") : "—"}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* RtnMsg Info */}
+                                            {(payment.rtnCode || payment.rtnMsg) && (
+                                                <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg mb-2">
+                                                    <div className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded font-mono text-gray-400">{payment.rtnCode}</div>
+                                                    <div className="text-[10px] text-gray-400 truncate">{payment.rtnMsg}</div>
+                                                </div>
+                                            )}
+
+                                            {/* Raw Callback Toggle */}
+                                            <button 
+                                                onClick={() => toggleCallback(payment.id)}
+                                                className="flex items-center gap-1.5 text-[10px] text-gray-600 hover:text-gray-400 transition-colors mt-2"
+                                            >
+                                                <ChevronDown size={12} className={`transition-transform ${expandedCallbacks[payment.id] ? 'rotate-180' : ''}`} />
+                                                {expandedCallbacks[payment.id] ? '收起詳細回傳數據' : '查看詳細回傳數據 (Raw Callback)'}
+                                            </button>
+
+                                            <AnimatePresence>
+                                                {expandedCallbacks[payment.id] && (
+                                                    <motion.div
+                                                        initial={{ height: 0, opacity: 0 }}
+                                                        animate={{ height: "auto", opacity: 1 }}
+                                                        exit={{ height: 0, opacity: 0 }}
+                                                        className="overflow-hidden"
+                                                    >
+                                                        <pre className="mt-3 p-3 bg-black/60 border border-white/5 rounded-lg text-[9px] font-mono text-gray-500 overflow-x-auto">
+                                                            {JSON.stringify(payment.rawCallback, null, 2)}
+                                                        </pre>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-10 border border-dashed border-white/10 rounded-2xl">
+                                    <Clock size={24} className="mx-auto text-gray-700 mb-2" />
+                                    <p className="text-xs text-gray-600 font-light">尚無金流交易紀錄</p>
+                                </div>
+                            )}
                         </motion.div>
                     </div>
 
-                    {/* Right Column - 1/3 */}
+                    {/* Right Column */}
                     <div className="space-y-6">
                         {/* Action Panel */}
                         <motion.div
@@ -314,46 +376,25 @@ export default function OrderDetailPage() {
                             transition={{ delay: 0.1 }}
                             className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
                         >
-                            <h2 className="text-sm font-light mb-4 flex items-center gap-2">
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
                                 <span className="w-1 h-4 bg-purple-400 rounded-full" />
                                 操作面板
                             </h2>
-
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-[10px] uppercase tracking-widest text-gray-500 block mb-2">
-                                        訂單狀態
-                                    </label>
-                                    <select
-                                        value={currentStatus}
-                                        onChange={(e) =>
-                                            setCurrentStatus(e.target.value as OrderStatus)
-                                        }
-                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-300 focus:outline-none focus:border-gold/50 transition-colors appearance-none cursor-pointer"
-                                    >
-                                        <option value="PENDING">待付款</option>
-                                        <option value="COMPLETED">已完成</option>
-                                        <option value="REFUNDED">已退款</option>
-                                    </select>
+                                    <label className="text-[10px] uppercase tracking-widest text-gray-500 block mb-2">訂單狀態</label>
+                                    <div className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-300">
+                                        {order.status}
+                                    </div>
                                 </div>
-
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all text-sm"
-                                >
-                                    <RotateCcw size={14} />
-                                    申請退款
-                                </motion.button>
-
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-gray-300 hover:bg-white/5 transition-all text-sm"
-                                >
+                                <button disabled className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/5 text-gray-600 cursor-not-allowed text-sm">
                                     <Send size={14} />
-                                    發送通知信
-                                </motion.button>
+                                    發送通知信 (Phase 3)
+                                </button>
+                                <button disabled className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/5 text-gray-600 cursor-not-allowed text-sm">
+                                    <RotateCcw size={14} />
+                                    申請退款 (Phase 4)
+                                </button>
                             </div>
                         </motion.div>
 
@@ -364,90 +405,49 @@ export default function OrderDetailPage() {
                             transition={{ delay: 0.15 }}
                             className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
                         >
-                            <h2 className="text-sm font-light mb-4 flex items-center gap-2">
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
                                 <span className="w-1 h-4 bg-orange-400 rounded-full" />
-                                內部備註
+                                管理員備註
                             </h2>
-
-                            <div className="flex gap-2 mb-4">
+                            <p className="text-xs text-gray-500 mb-4">{order.adminNotes || "無備註"}</p>
+                            <div className="flex gap-2">
                                 <input
                                     type="text"
                                     value={noteInput}
                                     onChange={(e) => setNoteInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleAddNote()}
-                                    placeholder="新增備註..."
-                                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold/50 transition-colors"
+                                    placeholder="快速筆記..."
+                                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none"
                                 />
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleAddNote}
-                                    className="p-2 rounded-xl bg-gold/10 text-gold hover:bg-gold/20 transition-colors"
-                                >
+                                <button className="p-2 rounded-xl bg-gold/10 text-gold hover:bg-gold/20">
                                     <MessageSquare size={16} />
-                                </motion.button>
+                                </button>
                             </div>
+                        </motion.div>
 
-                            <div className="space-y-3">
-                                {notes.length > 0 ? (
-                                    notes.map((note) => (
-                                        <div
-                                            key={note.id}
-                                            className="border-l-2 border-white/10 pl-3 py-1"
-                                        >
-                                            <p className="text-xs text-gray-300">
-                                                {note.content}
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <Clock size={10} className="text-gray-600" />
-                                                <p className="text-[10px] text-gray-600">
-                                                    {note.author} - {note.date}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-xs text-gray-600 text-center py-4">
-                                        尚無備註
-                                    </p>
-                                )}
+                        {/* Links */}
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
+                        >
+                            <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
+                                <span className="w-1 h-4 bg-blue-400 rounded-full" />
+                                捷徑
+                            </h2>
+                            <div className="space-y-2">
+                                <a 
+                                    href={`/payment/checkout?orderId=${order.id}`} 
+                                    target="_blank" 
+                                    className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all text-xs text-gray-300"
+                                >
+                                    <span>前往付款連結 (Customer View)</span>
+                                    <ExternalLink size={12} />
+                                </a>
                             </div>
                         </motion.div>
                     </div>
                 </div>
-
-                {/* Refund History */}
-                {order.refundHistory.length > 0 && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.25 }}
-                        className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
-                    >
-                        <h2 className="text-sm font-light mb-4 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-red-400 rounded-full" />
-                            退款紀錄
-                        </h2>
-                        <div className="space-y-3">
-                            {order.refundHistory.map((refund, idx) => (
-                                <div
-                                    key={idx}
-                                    className="flex items-center justify-between py-3 border-b border-white/5 last:border-0"
-                                >
-                                    <div>
-                                        <p className="text-sm text-gray-300">
-                                            {refund.reason}
-                                        </p>
-                                        <p className="text-xs text-gray-500">{refund.date}</p>
-                                    </div>
-                                    <p className="text-sm text-red-400">
-                                        -NT${refund.amount.toLocaleString()}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                )}
             </div>
 
             {/* Grain texture */}
@@ -460,3 +460,4 @@ export default function OrderDetailPage() {
         </div>
     );
 }
+

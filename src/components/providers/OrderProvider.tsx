@@ -7,6 +7,7 @@ interface OrderContextType {
     orders: any[];
     isLoading: boolean;
     fetchOrders: (filter?: OrderStatus | 'ALL') => Promise<void>;
+    fetchOrderById: (id: string) => Promise<any>;
     updateStatus: (id: string, status: OrderStatus, trackingNumber?: string) => Promise<void>;
 }
 
@@ -30,6 +31,17 @@ export function OrderProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const fetchOrderById = async (id: string) => {
+        try {
+            const res = await fetch(`/api/bff/v1/admin/orders?id=${id}`);
+            const json = await res.json();
+            return json.success ? json.data : null;
+        } catch (err) {
+            console.error(err);
+            return null;
+        }
+    };
+
     const updateStatus = async (id: string, status: OrderStatus, trackingNumber?: string) => {
         try {
             const res = await fetch(`/api/bff/v1/admin/orders?id=${id}`, {
@@ -44,7 +56,7 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     };
 
     return (
-        <OrderContext.Provider value={{ orders, isLoading, fetchOrders, updateStatus }}>
+        <OrderContext.Provider value={{ orders, isLoading, fetchOrders, fetchOrderById, updateStatus }}>
             {children}
         </OrderContext.Provider>
     );

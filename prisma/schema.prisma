@@ -198,6 +198,27 @@ model Order {
   paidAt          DateTime?
   adminNotes      String?       @db.Text
   refunds         Refund[]
+  payments        Payment[]     // ECPay payment records
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// ECPay payment transaction record — one payment attempt per Payment row
+model Payment {
+  id              String        @id @default(cuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id])
+  // ECPay: max 20 chars, alphanumeric, must be unique across all transactions
+  merchantTradeNo String        @unique
+  ecpayTradeNo    String?       // ECPay-generated trade number returned in callback
+  paymentMethod   String?       // e.g. Credit, CVS, ATM
+  paymentStatus   PaymentStatus @default(PENDING)
+  totalAmount     Int           // TWD integer (same unit as Order.totalAmount)
+  checkMacValue   String?       // stored for audit trail
+  rtnCode         String?       // ECPay RtnCode ("1" = success)
+  rtnMsg          String?       // ECPay RtnMsg
+  rawCallback     Json?         // full raw callback payload for audit
+  paidAt          DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
