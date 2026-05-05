@@ -140,40 +140,88 @@ export function ContentManager() {
         return matchesSearch && matchesStatus;
     });
 
+    const STATUS_LABELS: Record<string, string> = {
+        '全部': '全部',
+        [PublishStatus.PUBLISHED]: '已發佈',
+        [PublishStatus.DRAFT]: '草稿',
+        [PublishStatus.ARCHIVED]: '已封存',
+    };
+    const STATUS_COLORS: Record<string, string> = {
+        '全部': 'bg-blue-400',
+        [PublishStatus.PUBLISHED]: 'bg-emerald-400',
+        [PublishStatus.DRAFT]: 'bg-orange-400',
+        [PublishStatus.ARCHIVED]: 'bg-gray-400',
+    };
+
     return (
         <div className="flex flex-col h-full bg-black text-white">
             {/* Top Bar */}
-            <div className="flex items-center justify-between p-6 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-20">
-                <div className="flex items-center gap-6">
-                    <h1 className="text-xl font-light tracking-wider">內容管理</h1>
-                    <DBStatusBadge />
+            <div className="p-4 md:p-6 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-20 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-4">
+                        <h1 className="text-xl font-light tracking-wider">內容管理</h1>
+                        <DBStatusBadge />
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <div className="relative flex-1 min-w-[160px]">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                            <input
+                                type="text"
+                                placeholder="搜尋內容..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full bg-zinc-900/50 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-gold/50 transition-colors"
+                            />
+                        </div>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="bg-gold text-black px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 shrink-0"
+                        >
+                            <Plus size={18} /> 建立新內容
+                        </motion.button>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                        <input
-                            type="text"
-                            placeholder="搜尋內容..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="bg-zinc-900/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-gold/50 transition-colors w-64"
+                {/* Tablet/Mobile: Horizontal tabs + status filters */}
+                <div className="lg:hidden flex flex-col gap-2">
+                    <div className="flex gap-2">
+                        <TabButton
+                            active={activeTab === ContentType.WORKSHOP}
+                            onClick={() => setActiveTab(ContentType.WORKSHOP)}
+                            icon={<Sparkles size={16} />}
+                            label="工作坊"
+                        />
+                        <TabButton
+                            active={activeTab === ContentType.MUSIC}
+                            onClick={() => setActiveTab(ContentType.MUSIC)}
+                            icon={<MusicIcon size={16} />}
+                            label="樂器課程"
                         />
                     </div>
-                    <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-gold text-black px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                    >
-                        <Plus size={18} /> 建立新內容
-                    </motion.button>
+                    <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+                        {['全部', PublishStatus.PUBLISHED, PublishStatus.DRAFT, PublishStatus.ARCHIVED].map((status) => {
+                            const key = status === '全部' ? 'ALL' : status as any;
+                            const isActive = statusFilter === key;
+                            return (
+                                <button
+                                    key={status}
+                                    onClick={() => setStatusFilter(key)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${isActive ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-500 hover:bg-white/10 hover:text-gray-300'}`}
+                                >
+                                    <div className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[status]}`} />
+                                    {STATUS_LABELS[status]}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar Tabs */}
-                <div className="w-64 border-r border-white/5 p-4 flex flex-col gap-6">
+                {/* Desktop: Sidebar Tabs */}
+                <div className="hidden lg:flex flex-col w-64 border-r border-white/5 p-4 gap-6">
                     <div className="flex flex-col gap-2">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 px-4 mb-2 font-bold">內容類型</p>
                         <TabButton
@@ -181,12 +229,6 @@ export function ContentManager() {
                             onClick={() => setActiveTab(ContentType.WORKSHOP)}
                             icon={<Sparkles size={18} />}
                             label="工作坊"
-                        />
-                        <TabButton
-                            active={activeTab === ContentType.MUSIC}
-                            onClick={() => setActiveTab(ContentType.MUSIC)}
-                            icon={<MusicIcon size={18} />}
-                            label="樂器課程"
                         />
                     </div>
 
@@ -201,20 +243,15 @@ export function ContentManager() {
                                     : "text-gray-500 hover:bg-white/5 hover:text-gray-300"
                                     }`}
                             >
-                                <div className={`w-1.5 h-1.5 rounded-full ${status === '全部' ? 'bg-blue-400' :
-                                    status === PublishStatus.PUBLISHED ? 'bg-emerald-400' :
-                                        status === PublishStatus.DRAFT ? 'bg-orange-400' : 'bg-gray-400'
-                                    }`} />
-                                {status === '全部' ? '全部' : 
-                                 status === PublishStatus.PUBLISHED ? '已發佈' :
-                                 status === PublishStatus.DRAFT ? '草稿' : '已封存'}
+                                <div className={`w-1.5 h-1.5 rounded-full ${STATUS_COLORS[status]}`} />
+                                {STATUS_LABELS[status]}
                             </button>
                         ))}
                     </div>
                 </div>
 
                 {/* Content Table */}
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto p-4 md:p-6">
                     <div className="bg-zinc-900/30 border border-white/5 rounded-2xl overflow-hidden">
                         <table className="w-full text-left">
                             <thead>
@@ -251,20 +288,20 @@ export function ContentManager() {
                         <td className="px-6 py-4 text-sm text-gray-300">
                             ${item.price}
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-3 md:px-6 md:py-4">
                             <div className="flex items-center justify-end gap-1">
                                 {item.publishStatus !== PublishStatus.ARCHIVED ? (
                                     <>
                                         <button
                                             onClick={() => handleTogglePublish(item.id)}
-                                            className={`p-2 rounded-lg transition-colors ${item.publishStatus === PublishStatus.PUBLISHED ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' : 'text-gray-400 hover:bg-white/5'}`}
+                                            className={`p-2.5 rounded-lg transition-colors ${item.publishStatus === PublishStatus.PUBLISHED ? 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20' : 'text-gray-400 hover:bg-white/5'}`}
                                             title={item.publishStatus === PublishStatus.PUBLISHED ? "取消發佈" : "發佈"}
                                         >
                                             {item.publishStatus === PublishStatus.PUBLISHED ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
                                         </button>
                                         <button
                                             onClick={() => handleSetStatus(item.id, PublishStatus.ARCHIVED)}
-                                            className="p-2 text-gray-500 hover:bg-white/5 rounded-lg transition-colors"
+                                            className="p-2.5 text-gray-500 hover:bg-white/5 rounded-lg transition-colors"
                                             title="封存"
                                         >
                                             <Trash2 size={16} />
@@ -273,7 +310,7 @@ export function ContentManager() {
                                 ) : (
                                     <button
                                         onClick={() => handleSetStatus(item.id, PublishStatus.DRAFT)}
-                                        className="p-2 text-gold hover:bg-gold/10 rounded-lg transition-colors"
+                                        className="p-2.5 text-gold hover:bg-gold/10 rounded-lg transition-colors"
                                         title="恢復為草稿"
                                     >
                                         <Plus className="rotate-45" size={18} />
@@ -282,7 +319,7 @@ export function ContentManager() {
                                 <div className="w-px h-4 bg-white/10 mx-1" />
                                 <button
                                     onClick={() => router.push(`${activeTab === ContentType.WORKSHOP ? "/workshops" : "/music"}?preview=true`)}
-                                    className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                    className="p-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
                                     title="預覽"
                                 >
                                     <Eye size={18} />
@@ -292,14 +329,14 @@ export function ContentManager() {
                                         setEditingItem({ ...item });
                                         setIsEditModalOpen(true);
                                     }}
-                                    className="p-2 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
+                                    className="p-2.5 hover:bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors"
                                     title="編輯"
                                 >
                                     <Edit size={18} />
                                 </button>
                                 <button
                                     onClick={() => handleDelete(item.id)}
-                                    className="p-2 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
+                                    className="p-2.5 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-400 transition-colors"
                                     title="刪除"
                                 >
                                     <Trash2 size={18} />
@@ -335,8 +372,9 @@ export function ContentManager() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl p-8 shadow-2xl"
+                            className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                         >
+                            <div className="p-6 md:p-8 overflow-y-auto flex-1">
                             <h2 className="text-xl font-light mb-6">建立新{activeTab === ContentType.WORKSHOP ? "工作坊" : "樂器課程"}</h2>
                             <div className="space-y-4">
                                 <div>
@@ -382,6 +420,7 @@ export function ContentManager() {
                                     </button>
                                 </div>
                             </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -402,8 +441,9 @@ export function ContentManager() {
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl p-8 shadow-2xl"
+                            className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
                         >
+                            <div className="p-6 md:p-8 overflow-y-auto flex-1">
                             <h2 className="text-xl font-light mb-6 flex items-center gap-2">
                                 <Edit size={20} className="text-gold" />
                                 編輯{activeTab === ContentType.WORKSHOP ? "工作坊" : "樂器課程"}
@@ -591,6 +631,7 @@ export function ContentManager() {
                                         保存變更
                                     </button>
                                 </div>
+                            </div>
                             </div>
                         </motion.div>
                     </div>

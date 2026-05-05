@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Main Content */}
       <main className="flex-1 transition-all duration-300 h-screen overflow-hidden relative">
         <FeedbackOverlay pageName={getPageName(pathname)}>
-            <div className="h-full overflow-auto p-8">
+            <div className="h-full overflow-auto p-4 sm:p-6 lg:p-8">
                 <div className="max-w-7xl mx-auto pb-20">
                     {children}
                 </div>

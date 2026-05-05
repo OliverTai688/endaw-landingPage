@@ -17,9 +17,9 @@ export async function POST(request: Request) {
         const filename = `${uuidv4()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
         // Upload to Supabase Storage
-        // Make sure you have created a bucket named 'images' and set it to public
+        // Make sure you have created a bucket named 'image' and set it to public
         const { data, error } = await supabase.storage
-            .from('images')
+            .from('image')
             .upload(filename, file, {
                 cacheControl: '3600',
                 upsert: false
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
         // Get the public URL
         const { data: { publicUrl } } = supabase.storage
-            .from('images')
+            .from('image')
             .getPublicUrl(filename);
 
         console.log(`File uploaded to Supabase: ${publicUrl}`);

@@ -46,39 +46,36 @@ export function OrderManager() {
 
     return (
         <div className="flex flex-col h-full bg-black text-white font-sans">
-            {/* Top Bar - Matching ContentManager */}
-            <div className="flex items-center justify-between p-6 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-20">
-                <div className="flex items-center gap-6">
+            {/* Top Bar */}
+            <div className="p-4 md:p-6 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl sticky top-0 z-20 space-y-3">
+                <div className="flex items-center gap-4">
                     <h1 className="text-xl font-light tracking-wider">訂單 Pipeline</h1>
                     <DBStatusBadge />
                 </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-                        <input
-                            type="text"
-                            placeholder="搜尋訂單編號、客戶..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="bg-zinc-900/50 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:border-gold/50 transition-colors w-72"
-                        />
-                    </div>
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                    <input
+                        type="text"
+                        placeholder="搜尋訂單編號、客戶..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full bg-zinc-900/50 border border-white/10 rounded-lg pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-gold/50 transition-colors"
+                    />
                 </div>
             </div>
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Fixed Sidebar for Filters */}
-                <div className="w-64 border-r border-white/5 p-4 flex flex-col gap-6 overflow-y-auto">
+                {/* Desktop: Filter Sidebar */}
+                <div className="hidden lg:flex w-64 border-r border-white/5 p-4 flex-col gap-6 overflow-y-auto">
                     <div className="flex flex-col gap-1">
                         <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 px-4 mb-2 font-bold">訂單狀態階段</p>
                         <FilterButton active={filter === 'ALL'} onClick={() => setFilter('ALL')} label="所有訂單" count={orders.length} />
                         <div className="h-px bg-white/5 my-2" />
                         {Object.values(OrderStatus).map((status) => (
-                            <FilterButton 
-                                key={status} 
-                                active={filter === status} 
-                                onClick={() => setFilter(status)} 
+                            <FilterButton
+                                key={status}
+                                active={filter === status}
+                                onClick={() => setFilter(status)}
                                 label={STATUS_CONFIG[status].label}
                                 status={status}
                                 count={orders.filter(o => o.status === status).length}
@@ -87,8 +84,27 @@ export function OrderManager() {
                     </div>
                 </div>
 
+                {/* Tablet/Mobile: Main area with horizontal filter chips */}
+                <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Tablet/Mobile horizontal filter row */}
+                    <div className="lg:hidden border-b border-white/5 px-4 py-3 overflow-x-auto scrollbar-hide">
+                        <div className="flex items-center gap-2 min-w-max">
+                            <FilterChip active={filter === 'ALL'} onClick={() => setFilter('ALL')} label="全部" count={orders.length} />
+                            {Object.values(OrderStatus).map((status) => (
+                                <FilterChip
+                                    key={status}
+                                    active={filter === status}
+                                    onClick={() => setFilter(status)}
+                                    label={STATUS_CONFIG[status].label}
+                                    status={status}
+                                    count={orders.filter(o => o.status === status).length}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
                 {/* Main Pipeline View */}
-                <div className="flex-1 overflow-auto p-6 bg-zinc-950/20">
+                <div className="flex-1 overflow-auto p-4 md:p-6 bg-zinc-950/20">
                     <div className="max-w-6xl mx-auto space-y-4">
                         <AnimatePresence mode="popLayout">
                             {isLoading ? (
@@ -112,8 +128,29 @@ export function OrderManager() {
                         </AnimatePresence>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
+    );
+}
+
+function FilterChip({ active, onClick, label, status, count }: any) {
+    const config = status ? STATUS_CONFIG[status as OrderStatus] : null;
+    return (
+        <button
+            onClick={onClick}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium transition-all duration-200 whitespace-nowrap ${
+                active
+                    ? "bg-gold text-black shadow-md shadow-gold/20"
+                    : "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white"
+            }`}
+        >
+            {config && <config.icon size={13} />}
+            <span>{label}</span>
+            <span className={`text-[10px] px-1 py-0.5 rounded ${active ? 'bg-black/20 font-bold' : 'bg-white/10'}`}>
+                {count}
+            </span>
+        </button>
     );
 }
 

@@ -104,7 +104,7 @@ export function AdminSidebar() {
                                 <button
                                     key={item.href}
                                     onClick={() => router.push(item.href)}
-                                    className={`w-full flex items-center justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-xl text-sm transition-all duration-200 ${
+                                    className={`w-full flex items-center justify-center md:justify-start gap-3 px-3 md:px-4 py-3.5 rounded-xl text-sm transition-all duration-200 touch-manipulation min-h-[44px] ${
                                         active
                                             ? "bg-gold/10 text-gold font-medium"
                                             : "text-gray-400 hover:bg-white/5 hover:text-white"
@@ -126,7 +126,7 @@ export function AdminSidebar() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={handleLogout}
-                    className="w-full flex items-center justify-center md:justify-start gap-3 px-3 md:px-4 py-3 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-red-500/10 transition-all duration-300"
+                    className="w-full flex items-center justify-center md:justify-start gap-3 px-3 md:px-4 py-3.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-red-500/10 transition-all duration-300 touch-manipulation min-h-[44px]"
                     title="登出"
                 >
                     <LogOut size={18} />

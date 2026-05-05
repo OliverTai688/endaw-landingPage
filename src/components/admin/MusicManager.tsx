@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Search, Edit, Trash2, X, Music2,
-    ChevronDown, ChevronRight, Image as ImageIcon,
+    ChevronDown, ChevronRight, Image as ImageIcon, Eye
 } from 'lucide-react';
 import { PublishStatus } from '@prisma/client';
 import { DBStatusBadge } from './DBStatusBadge';
@@ -311,10 +311,13 @@ export function MusicManager() {
                                                 )}
                                             </div>
                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
-                                                <button onClick={() => openEdit(inst)} className="p-3 bg-white text-black rounded-full hover:bg-gold transition-colors">
+                                                <button onClick={() => window.open(`/music/${inst.nameEn}?preview=true`, '_blank')} className="p-3 bg-white/10 text-white rounded-full hover:bg-blue-500/30 border border-white/20 transition-colors" title="預覽">
+                                                    <Eye size={20} />
+                                                </button>
+                                                <button onClick={() => openEdit(inst)} className="p-3 bg-white text-black rounded-full hover:bg-gold transition-colors" title="編輯">
                                                     <Edit size={20} />
                                                 </button>
-                                                <button onClick={() => handleDelete(inst.id)} className="p-3 bg-white/10 text-white rounded-full hover:bg-red-500/30 border border-white/20 transition-colors">
+                                                <button onClick={() => handleDelete(inst.id)} className="p-3 bg-white/10 text-white rounded-full hover:bg-red-500/30 border border-white/20 transition-colors" title="刪除">
                                                     <Trash2 size={20} />
                                                 </button>
                                             </div>

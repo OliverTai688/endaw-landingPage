@@ -85,19 +85,19 @@ export function InventoryManager() {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right">
+                                            <td className="px-4 py-3 md:px-6 md:py-4 text-right">
                                                 <div className="flex items-center justify-end gap-2">
-                                                    <button 
+                                                    <button
                                                         onClick={() => adjustStock(item.productId, 1, AdjustmentType.OUTBOUND)}
-                                                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition-all"
+                                                        className="p-2.5 rounded-lg bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 border border-rose-500/20 transition-all"
                                                     >
-                                                        <Minus size={14} />
+                                                        <Minus size={16} />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => adjustStock(item.productId, 1, AdjustmentType.INBOUND)}
-                                                        className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
+                                                        className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
                                                     >
-                                                        <Plus size={14} />
+                                                        <Plus size={16} />
                                                     </button>
                                                 </div>
                                             </td>
