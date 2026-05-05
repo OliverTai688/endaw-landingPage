@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const { productId, amount, itemName, type } = body;
 
     // Map content type to OrderType enum
-    let orderType = OrderType.PRODUCT;
+    let orderType: OrderType = OrderType.PRODUCT;
     if (type === 'WORKSHOP') orderType = OrderType.WORKSHOP;
     if (type === 'MUSIC') orderType = OrderType.MUSIC;
 
