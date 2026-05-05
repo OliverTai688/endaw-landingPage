@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Search, Edit, Trash2, X, Calendar,
     MapPin, Users, ChevronDown, Image as ImageIcon,
+    Eye, ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { PublishStatus } from '@prisma/client';
 import { DBStatusBadge } from './DBStatusBadge';
@@ -23,7 +24,7 @@ interface WorkshopForm {
     subtitle: string;
     description: string;
     coverImage: string;
-    price: number;
+    price: number | string;
     tags: string;
     status: PublishStatus;
     // metadata
@@ -31,8 +32,8 @@ interface WorkshopForm {
     scheduleDate: string;
     scheduleLocation: string;
     scheduleDuration: string;
-    capacityTotal: number;
-    capacityRemaining: number;
+    capacityTotal: number | string;
+    capacityRemaining: number | string;
     registrationDeadline: string;
     attendanceRules: string;
     refundPolicy: string;
@@ -65,7 +66,7 @@ const emptyForm: WorkshopForm = {
     subtitle: '',
     description: '',
     coverImage: '',
-    price: 0,
+    price: '',
     tags: '',
     status: PublishStatus.DRAFT,
     instructor: { name: '', bio: '', avatar: '' },
@@ -150,6 +151,26 @@ export function WorkshopManager() {
         fetchWorkshops();
     };
 
+    const handleTogglePublish = async (w: WorkshopData) => {
+        try {
+            const newStatus = w.status === PublishStatus.PUBLISHED ? PublishStatus.DRAFT : PublishStatus.PUBLISHED;
+            const res = await fetch('/api/bff/v1/admin/workshops', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: w.id, status: newStatus }),
+            });
+            const json = await res.json();
+            if (!json.success) {
+                alert('更新失敗：' + (json.error || '未知錯誤'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('網路連線發生錯誤');
+        } finally {
+            fetchWorkshops();
+        }
+    };
+
     const handleSave = async () => {
         if (!form.title.trim()) return;
         setIsSaving(true);
@@ -162,8 +183,8 @@ export function WorkshopManager() {
                     duration: form.scheduleDuration,
                 },
                 capacity: {
-                    total: form.capacityTotal,
-                    remaining: form.capacityRemaining,
+                    total: Number(form.capacityTotal) || 0,
+                    remaining: Number(form.capacityRemaining) || 0,
                 },
                 registrationDeadline: form.registrationDeadline ? new Date(form.registrationDeadline).toISOString() : null,
                 policies: {
@@ -183,7 +204,7 @@ export function WorkshopManager() {
                 subtitle: form.subtitle,
                 description: form.description,
                 coverImage: form.coverImage,
-                price: form.price,
+                price: Number(form.price) || 0,
                 tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
                 status: form.status,
                 metadata,
@@ -282,11 +303,17 @@ export function WorkshopManager() {
                                                     {status.label}
                                                 </span>
                                             </div>
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
-                                                <button onClick={() => openEdit(w)} className="p-3 bg-white text-black rounded-full hover:bg-gold transition-colors">
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                                                <button onClick={() => window.open(`/workshops/${w.id}?preview=true`, '_blank')} className="p-3 bg-white/10 text-white rounded-full hover:bg-blue-500/30 border border-white/20 transition-colors" title="預覽">
+                                                    <Eye size={20} />
+                                                </button>
+                                                <button onClick={() => openEdit(w)} className="p-3 bg-white text-black rounded-full hover:bg-gold transition-colors" title="編輯">
                                                     <Edit size={20} />
                                                 </button>
-                                                <button onClick={() => handleDelete(w.id)} className="p-3 bg-white/10 text-white rounded-full hover:bg-red-500/30 border border-white/20 transition-colors">
+                                                <button onClick={() => handleTogglePublish(w)} className={`p-3 rounded-full border transition-colors ${w.status === PublishStatus.PUBLISHED ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/40' : 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/40'}`} title={w.status === PublishStatus.PUBLISHED ? '取消發佈 (改為草稿)' : '發佈'}>
+                                                    {w.status === PublishStatus.PUBLISHED ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                                                </button>
+                                                <button onClick={() => handleDelete(w.id)} className="p-3 bg-white/10 text-white rounded-full hover:bg-red-500/30 border border-white/20 transition-colors" title="刪除">
                                                     <Trash2 size={20} />
                                                 </button>
                                             </div>
@@ -360,7 +387,7 @@ export function WorkshopManager() {
                                         <ImageUploadField label="封面圖片" value={form.coverImage} onChange={(url) => updateField('coverImage', url)} />
                                     </div>
                                     <Field label="價格 (NT$)">
-                                        <input type="number" value={form.price} onChange={(e) => updateField('price', Number(e.target.value))} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
+                                        <input type="number" value={form.price} onChange={(e) => updateField('price', e.target.value)} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
                                     <Field label="狀態">
                                         <div className="relative">
@@ -407,10 +434,10 @@ export function WorkshopManager() {
                                         <input type="text" value={form.scheduleLocation} onChange={(e) => updateField('scheduleLocation', e.target.value)} placeholder="地點" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
                                     <Field label="名額總數">
-                                        <input type="number" value={form.capacityTotal} onChange={(e) => updateField('capacityTotal', Number(e.target.value))} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
+                                        <input type="number" value={form.capacityTotal} onChange={(e) => updateField('capacityTotal', e.target.value)} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
                                     <Field label="剩餘名額">
-                                        <input type="number" value={form.capacityRemaining} onChange={(e) => updateField('capacityRemaining', Number(e.target.value))} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
+                                        <input type="number" value={form.capacityRemaining} onChange={(e) => updateField('capacityRemaining', e.target.value)} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
                                     <Field label="報名截止時間" className="col-span-2">
                                         <input type="datetime-local" value={form.registrationDeadline} onChange={(e) => updateField('registrationDeadline', e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />

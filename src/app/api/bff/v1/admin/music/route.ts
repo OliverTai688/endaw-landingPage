@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
       name, nameEn, coverImage, description,
       containsEquipment, equipmentDescription,
       rentalAvailable, rentalOffsetAllowed,
-      levels, faqs,
+      status, levels, faqs,
     } = body;
 
     const instrument = await prisma.musicInstrument.create({
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         equipmentDescription: equipmentDescription || null,
         rentalAvailable: rentalAvailable || false,
         rentalOffsetAllowed: rentalOffsetAllowed || false,
+        status: status || PublishStatus.DRAFT,
         levels: {
           create: (levels || []).map((level: any, li: number) => ({
             name: level.name,
@@ -89,7 +90,7 @@ export async function PUT(req: NextRequest) {
       id, name, nameEn, coverImage, description,
       containsEquipment, equipmentDescription,
       rentalAvailable, rentalOffsetAllowed,
-      levels, faqs,
+      status, levels, faqs,
     } = body;
 
     if (!id) {
@@ -116,6 +117,7 @@ export async function PUT(req: NextRequest) {
         equipmentDescription: equipmentDescription || null,
         rentalAvailable: rentalAvailable || false,
         rentalOffsetAllowed: rentalOffsetAllowed || false,
+        status: status || PublishStatus.DRAFT,
         levels: {
           create: (levels || []).map((level: any, li: number) => ({
             name: level.name,
@@ -168,6 +170,27 @@ export async function DELETE(req: NextRequest) {
     await prisma.musicInstrument.delete({ where: { id } });
 
     return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ success: false, error: 'Missing id or status' }, { status: 400 });
+    }
+
+    const instrument = await prisma.musicInstrument.update({
+      where: { id },
+      data: { status },
+      include: includeAll,
+    });
+
+    return NextResponse.json({ success: true, data: instrument });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

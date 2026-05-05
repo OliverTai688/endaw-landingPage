@@ -51,7 +51,6 @@ const navSections: NavSection[] = [
     {
         title: "內容管理",
         items: [
-            { label: "內容編輯", href: "/admin/content", icon: <FileEdit size={18} /> },
             { label: "公告管理", href: "/admin/announcements", icon: <Megaphone size={18} /> },
         ],
     },

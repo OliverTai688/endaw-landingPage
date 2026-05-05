@@ -235,8 +235,8 @@ export default function FeedbackOverlay({ children, pageName }: FeedbackOverlayP
                 )}
             </AnimatePresence>
 
-            {/* Feedback Mode Toggle */}
-            <div className="fixed bottom-8 left-8 z-[100] feedback-ignore">
+            {/* Feedback Mode Toggle (Hidden as requested) */}
+            <div className="fixed bottom-8 left-8 z-[100] feedback-ignore hidden">
                 <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}

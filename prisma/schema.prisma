@@ -293,6 +293,7 @@ model MusicInstrument {
   equipmentDescription String?
   rentalAvailable      Boolean      @default(false)
   rentalOffsetAllowed  Boolean      @default(false)
+  status               PublishStatus @default(DRAFT)
   levels               MusicLevel[]
   faqs                 MusicFAQ[]
   createdAt            DateTime     @default(now())

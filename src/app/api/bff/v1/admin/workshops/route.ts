@@ -103,3 +103,24 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ success: false, error: 'Missing id or status' }, { status: 400 });
+    }
+
+    const content = await prisma.content.update({
+      where: { id },
+      data: { status },
+      include: { workshop: true },
+    });
+
+    return NextResponse.json({ success: true, data: content });
+  } catch (error: any) {
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}

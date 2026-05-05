@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plus, Search, Edit, Trash2, X, Music2,
-    ChevronDown, ChevronRight, Image as ImageIcon, Eye
+    ChevronDown, ChevronRight, Image as ImageIcon, Eye,
+    ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { PublishStatus } from '@prisma/client';
 import { DBStatusBadge } from './DBStatusBadge';
@@ -14,14 +15,14 @@ import { ImageUploadField } from './ImageUploadField';
 
 interface PackageForm {
     name: string;
-    lessonCount: number;
-    bonusLessons: number;
-    validDuration: number;
+    lessonCount: number | string;
+    bonusLessons: number | string;
+    validDuration: number | string;
     firstClassDate: string;
     formationRequired: boolean;
-    formationDecisionDays: number;
+    formationDecisionDays: number | string;
     refundPolicy: string;
-    price: number;
+    price: number | string;
     status: string;
     highlights: string;
     includedEquipment: string;
@@ -46,6 +47,7 @@ interface InstrumentForm {
     equipmentDescription: string;
     rentalAvailable: boolean;
     rentalOffsetAllowed: boolean;
+    status: PublishStatus;
     levels: LevelForm[];
     faqs: FAQForm[];
 }
@@ -60,6 +62,7 @@ interface InstrumentData {
     equipmentDescription: string | null;
     rentalAvailable: boolean;
     rentalOffsetAllowed: boolean;
+    status: PublishStatus;
     levels: any[];
     faqs: any[];
 }
@@ -67,13 +70,14 @@ interface InstrumentData {
 const emptyPackage: PackageForm = {
     name: '', lessonCount: 1, bonusLessons: 0, validDuration: 3,
     firstClassDate: '', formationRequired: false, formationDecisionDays: 0,
-    refundPolicy: '', price: 0, status: 'DRAFT', highlights: '', includedEquipment: '',
+    refundPolicy: '', price: '', status: 'DRAFT', highlights: '', includedEquipment: '',
 };
 
 const emptyForm: InstrumentForm = {
     name: '', nameEn: '', coverImage: '', description: '',
     containsEquipment: false, equipmentDescription: '',
     rentalAvailable: false, rentalOffsetAllowed: false,
+    status: PublishStatus.DRAFT,
     levels: [], faqs: [],
 };
 
@@ -129,6 +133,7 @@ export function MusicManager() {
             equipmentDescription: inst.equipmentDescription || '',
             rentalAvailable: inst.rentalAvailable,
             rentalOffsetAllowed: inst.rentalOffsetAllowed,
+            status: inst.status || PublishStatus.DRAFT,
             levels: (inst.levels || []).map((level: any) => ({
                 name: level.name,
                 packages: (level.packages || []).map((pkg: any) => ({
@@ -161,6 +166,26 @@ export function MusicManager() {
         fetchInstruments();
     };
 
+    const handleTogglePublish = async (inst: InstrumentData) => {
+        try {
+            const newStatus = inst.status === PublishStatus.PUBLISHED ? PublishStatus.DRAFT : PublishStatus.PUBLISHED;
+            const res = await fetch('/api/bff/v1/admin/music', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: inst.id, status: newStatus }),
+            });
+            const json = await res.json();
+            if (!json.success) {
+                alert('更新失敗：' + (json.error || '未知錯誤'));
+            }
+        } catch (error) {
+            console.error(error);
+            alert('網路連線發生錯誤');
+        } finally {
+            fetchInstruments();
+        }
+    };
+
     const handleSave = async () => {
         if (!form.name.trim() || !form.nameEn.trim()) return;
         setIsSaving(true);
@@ -175,19 +200,20 @@ export function MusicManager() {
                 equipmentDescription: form.equipmentDescription || null,
                 rentalAvailable: form.rentalAvailable,
                 rentalOffsetAllowed: form.rentalOffsetAllowed,
+                status: form.status,
                 levels: form.levels.map((level) => ({
                     name: level.name,
                     packages: level.packages.map((pkg) => ({
                         name: pkg.name,
-                        lessonCount: pkg.lessonCount,
-                        bonusLessons: pkg.bonusLessons,
-                        validDuration: pkg.validDuration,
+                        lessonCount: Number(pkg.lessonCount) || 1,
+                        bonusLessons: Number(pkg.bonusLessons) || 0,
+                        validDuration: Number(pkg.validDuration) || 1,
                         firstClassDate: pkg.firstClassDate ? new Date(pkg.firstClassDate).toISOString() : null,
                         registrationStartDates: [],
                         formationRequired: pkg.formationRequired,
-                        formationDecisionDays: pkg.formationDecisionDays,
+                        formationDecisionDays: Number(pkg.formationDecisionDays) || 0,
                         refundPolicy: pkg.refundPolicy,
-                        price: pkg.price,
+                        price: Number(pkg.price) || 0,
                         status: pkg.status,
                         highlights: pkg.highlights.split(',').map((s: string) => s.trim()).filter(Boolean),
                         includedEquipment: pkg.includedEquipment.split(',').map((s: string) => s.trim()).filter(Boolean),
@@ -259,6 +285,12 @@ export function MusicManager() {
 
     // ── Render ──────────────────────────────────────────
 
+    const statusConfig: Record<string, { label: string; cls: string }> = {
+        [PublishStatus.PUBLISHED]: { label: '已上架', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+        [PublishStatus.DRAFT]: { label: '草稿', cls: 'bg-orange-500/10 text-orange-400 border-orange-500/20' },
+        [PublishStatus.ARCHIVED]: { label: '已封存', cls: 'bg-gray-500/10 text-gray-400 border-gray-500/20' },
+    };
+
     return (
         <div className="flex flex-col h-full bg-black text-white font-sans">
             {/* Top Bar */}
@@ -288,6 +320,7 @@ export function MusicManager() {
                             ))
                             : filtered.map((inst, i) => {
                                 const totalPkgs = inst.levels.reduce((sum: number, l: any) => sum + (l.packages?.length || 0), 0);
+                                const status = statusConfig[inst.status] || statusConfig[PublishStatus.DRAFT];
                                 return (
                                     <motion.div
                                         key={inst.id}
@@ -303,19 +336,25 @@ export function MusicManager() {
                                                 <ImageIcon className="text-zinc-800" size={48} />
                                             )}
                                             <div className="absolute top-4 left-4 flex flex-col gap-2">
+                                                <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md border w-max ${status.cls}`}>
+                                                    {status.label}
+                                                </span>
                                                 {inst.rentalAvailable && (
-                                                    <span className="px-2 py-1 rounded-md text-[10px] font-bold backdrop-blur-md border bg-blue-500/10 text-blue-400 border-blue-500/20">可租借</span>
+                                                    <span className="px-2 py-1 rounded-md text-[10px] font-bold backdrop-blur-md border bg-blue-500/10 text-blue-400 border-blue-500/20 w-max">可租借</span>
                                                 )}
                                                 {inst.containsEquipment && (
-                                                    <span className="px-2 py-1 rounded-md text-[10px] font-bold backdrop-blur-md border bg-green-500/10 text-green-400 border-green-500/20">含器材</span>
+                                                    <span className="px-2 py-1 rounded-md text-[10px] font-bold backdrop-blur-md border bg-green-500/10 text-green-400 border-green-500/20 w-max">含器材</span>
                                                 )}
                                             </div>
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4 backdrop-blur-[2px]">
+                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
                                                 <button onClick={() => window.open(`/music/${inst.nameEn}?preview=true`, '_blank')} className="p-3 bg-white/10 text-white rounded-full hover:bg-blue-500/30 border border-white/20 transition-colors" title="預覽">
                                                     <Eye size={20} />
                                                 </button>
                                                 <button onClick={() => openEdit(inst)} className="p-3 bg-white text-black rounded-full hover:bg-gold transition-colors" title="編輯">
                                                     <Edit size={20} />
+                                                </button>
+                                                <button onClick={() => handleTogglePublish(inst)} className={`p-3 rounded-full border transition-colors ${inst.status === PublishStatus.PUBLISHED ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/40' : 'bg-orange-500/20 text-orange-400 border-orange-500/30 hover:bg-orange-500/40'}`} title={inst.status === PublishStatus.PUBLISHED ? '取消發佈 (改為草稿)' : '發佈'}>
+                                                    {inst.status === PublishStatus.PUBLISHED ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
                                                 </button>
                                                 <button onClick={() => handleDelete(inst.id)} className="p-3 bg-white/10 text-white rounded-full hover:bg-red-500/30 border border-white/20 transition-colors" title="刪除">
                                                     <Trash2 size={20} />
@@ -365,11 +404,21 @@ export function MusicManager() {
                                 {/* 基本資訊 */}
                                 <SectionTitle title="基本資訊" />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Field label="樂器名稱">
+                                    <Field label="樂器名稱" className="col-span-2 md:col-span-1">
                                         <input autoFocus type="text" value={form.name} onChange={(e) => updateField('name', e.target.value)} placeholder="如：吉他" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors" />
                                     </Field>
-                                    <Field label="英文名稱 (URL)">
+                                    <Field label="英文名稱 (URL)" className="col-span-2 md:col-span-1">
                                         <input type="text" value={form.nameEn} onChange={(e) => updateField('nameEn', e.target.value)} placeholder="guitar" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors font-mono text-sm" />
+                                    </Field>
+                                    <Field label="狀態" className="col-span-2">
+                                        <div className="relative">
+                                            <select value={form.status} onChange={(e) => updateField('status', e.target.value as PublishStatus)} className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors appearance-none pr-10">
+                                                <option value={PublishStatus.DRAFT}>草稿</option>
+                                                <option value={PublishStatus.PUBLISHED}>已上架</option>
+                                                <option value={PublishStatus.ARCHIVED}>已封存</option>
+                                            </select>
+                                            <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                        </div>
                                     </Field>
                                     <div className="col-span-2">
                                         <ImageUploadField label="封面圖片" value={form.coverImage} onChange={(url) => updateField('coverImage', url)} />
@@ -443,16 +492,16 @@ export function MusicManager() {
                                                                 <input type="text" value={pkg.name} onChange={(e) => updatePackage(li, pi, { name: e.target.value })} placeholder="如：吉他入門體驗" className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>
                                                             <Field label="堂數">
-                                                                <input type="number" value={pkg.lessonCount} onChange={(e) => updatePackage(li, pi, { lessonCount: Number(e.target.value) })} min={1} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
+                                                                <input type="number" value={pkg.lessonCount} onChange={(e) => updatePackage(li, pi, { lessonCount: e.target.value })} min={1} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>
                                                             <Field label="贈送堂數">
-                                                                <input type="number" value={pkg.bonusLessons} onChange={(e) => updatePackage(li, pi, { bonusLessons: Number(e.target.value) })} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
+                                                                <input type="number" value={pkg.bonusLessons} onChange={(e) => updatePackage(li, pi, { bonusLessons: e.target.value })} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>
                                                             <Field label="價格 (NT$)">
-                                                                <input type="number" value={pkg.price} onChange={(e) => updatePackage(li, pi, { price: Number(e.target.value) })} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
+                                                                <input type="number" value={pkg.price} onChange={(e) => updatePackage(li, pi, { price: e.target.value })} min={0} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>
                                                             <Field label="有效月數">
-                                                                <input type="number" value={pkg.validDuration} onChange={(e) => updatePackage(li, pi, { validDuration: Number(e.target.value) })} min={1} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
+                                                                <input type="number" value={pkg.validDuration} onChange={(e) => updatePackage(li, pi, { validDuration: e.target.value })} min={1} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>
                                                             <Field label="狀態">
                                                                 <div className="relative">
