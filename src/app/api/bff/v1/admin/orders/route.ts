@@ -29,7 +29,10 @@ export async function GET(req: NextRequest) {
           },
           payments: {
             orderBy: { createdAt: 'desc' }
-          }
+          },
+          attendees: {
+            orderBy: { sortOrder: 'asc' }
+          },
         },
       });
 

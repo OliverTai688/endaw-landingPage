@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Check, AlertTriangle } from "lucide-react";
+import { Check, AlertTriangle, CalendarDays } from "lucide-react";
 import type { Package, Level } from "@/lib/types";
 
 interface PackageSelectorProps {
@@ -10,36 +10,50 @@ interface PackageSelectorProps {
     onSelectPackage?: (pkg: Package) => void;
 }
 
+function getRecommendedPackageId(levels: Level[]): string | null {
+    const all = levels.flatMap((l) => l.packages.filter((p) => p.status === "published"));
+    if (all.length === 0) return null;
+
+    const bonus = all.filter((p) => p.bonusLessons > 0);
+    if (bonus.length > 0) {
+        return bonus.reduce((best, p) => {
+            const bPPL = best.price / (best.lessonCount + best.bonusLessons);
+            const pPPL = p.price / (p.lessonCount + p.bonusLessons);
+            return pPPL < bPPL ? p : best;
+        }).id;
+    }
+
+    if (all.length <= 2) return all[all.length - 1].id;
+    return all[Math.floor(all.length / 2)].id;
+}
+
 export function PackageSelector({ levels, onSelectPackage }: PackageSelectorProps) {
     const [selectedLevelId, setSelectedLevelId] = useState(levels[0]?.id || "");
+    const recommendedId = getRecommendedPackageId(levels);
 
-    // Sync selectedLevelId if levels change
     useEffect(() => {
-        if (levels.length > 0 && !levels.find(l => l.id === selectedLevelId)) {
+        if (levels.length > 0 && !levels.find((l) => l.id === selectedLevelId)) {
             setSelectedLevelId(levels[0].id);
         }
     }, [levels, selectedLevelId]);
 
-    const selectedLevel = levels.find((level) => level.id === selectedLevelId);
+    const selectedLevel = levels.find((l) => l.id === selectedLevelId);
 
     return (
         <div className="w-full">
-            {/* Level Selector */}
             {levels.length > 1 && (
-                <div className="mb-8">
-                    <h3 className="text-lg font-light text-gray-300 mb-4">選擇程度</h3>
+                <div className="mb-10">
+                    <p className="text-sm text-gray-500 mb-3">選擇程度</p>
                     <div className="flex flex-wrap gap-3">
                         {levels.map((level) => (
                             <button
                                 key={level.id}
                                 onClick={() => setSelectedLevelId(level.id)}
-                                className={`
-                  px-8 py-3 rounded-lg border transition-all duration-300 text-base font-medium
-                  ${selectedLevelId === level.id
-                                        ? "bg-white/10 text-white border-white shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                                className={`px-8 py-2.5 rounded-lg border text-sm font-medium transition-all duration-300
+                                    ${selectedLevelId === level.id
+                                        ? "bg-white/10 text-white border-white"
                                         : "bg-transparent text-zinc-500 border-zinc-800 hover:border-zinc-600"
-                                    }
-                `}
+                                    }`}
                             >
                                 {level.name}
                             </button>
@@ -48,14 +62,14 @@ export function PackageSelector({ levels, onSelectPackage }: PackageSelectorProp
                 </div>
             )}
 
-            {/* Package Grid */}
             {selectedLevel && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {selectedLevel.packages.map((pkg, index) => (
+                <div className={`grid grid-cols-1 gap-6 ${selectedLevel.packages.length === 2 ? "md:grid-cols-2" : "md:grid-cols-2 lg:grid-cols-3"}`}>
+                    {selectedLevel.packages.map((pkg, i) => (
                         <PackageCard
                             key={pkg.id}
                             package={pkg}
-                            index={index}
+                            index={i}
+                            isRecommended={pkg.id === recommendedId}
                             onSelect={onSelectPackage}
                         />
                     ))}
@@ -68,138 +82,145 @@ export function PackageSelector({ levels, onSelectPackage }: PackageSelectorProp
 interface PackageCardProps {
     package: Package;
     index: number;
+    isRecommended: boolean;
     onSelect?: (pkg: Package) => void;
 }
 
-function PackageCard({ package: pkg, index, onSelect }: PackageCardProps) {
-    const totalLessons = pkg.lessonCount + pkg.bonusLessons;
+function PackageCard({ package: pkg, index, isRecommended, onSelect }: PackageCardProps) {
+    const total = pkg.lessonCount + pkg.bonusLessons;
     const hasBonus = pkg.bonusLessons > 0;
+    const perLesson = Math.round(pkg.price / total);
 
-    const formatDate = (date: Date) => {
-        return new Intl.DateTimeFormat("zh-TW", {
+    const formatDate = (d: Date) =>
+        new Intl.DateTimeFormat("zh-TW", {
             month: "long",
             day: "numeric",
             weekday: "short",
-        }).format(date);
-    };
+        }).format(d);
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * index }}
-            className="relative bg-gradient-to-br from-gray-900 to-black border border-gray-800 rounded-lg p-6 hover:border-white/40 transition-all duration-300 group flex flex-col h-full"
+            className={`relative rounded-2xl flex flex-col transition-all duration-300
+                ${isRecommended
+                    ? "bg-gradient-to-br from-[#1a1500] via-black to-[#0d0d00] border-2 border-gold/70 shadow-[0_0_40px_rgba(212,175,55,0.12)] md:scale-[1.03]"
+                    : "bg-gradient-to-br from-gray-900 to-black border border-gray-800 hover:border-white/30"
+                }`}
         >
-            {/* ... rest of content ... */}
-            <div className="flex-1 flex flex-col">
-                {/* Decorative corners */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t border-l border-white/10 rounded-tl-lg" />
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-white/10 rounded-br-lg" />
+            {isRecommended && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gold text-black text-xs font-bold px-5 py-1.5 rounded-full whitespace-nowrap shadow-lg tracking-wide">
+                    最多人選擇
+                </div>
+            )}
 
-                {/* Bonus Badge */}
-                {hasBonus && (
-                    <div className="absolute -top-3 -right-3 bg-white text-black text-xs px-3 py-1 rounded-full border border-black font-medium shadow-lg">
-                        買{pkg.lessonCount}送{pkg.bonusLessons}
-                    </div>
-                )}
+            {hasBonus && !isRecommended && (
+                <div className="absolute -top-3 right-4 bg-white text-black text-xs font-bold px-3 py-1 rounded-full shadow">
+                    買{pkg.lessonCount}送{pkg.bonusLessons}
+                </div>
+            )}
 
-                {/* Formation Required Badge */}
-                {pkg.formationRequired && (
-                    <div className="absolute -top-3 -left-3 bg-zinc-700 text-white text-xs px-3 py-1 rounded-full border border-black font-medium shadow-lg">
-                        需成班
-                    </div>
-                )}
+            {pkg.formationRequired && !isRecommended && (
+                <div className="absolute -top-3 left-4 bg-zinc-700 text-white text-xs px-3 py-1 rounded-full">
+                    需成班
+                </div>
+            )}
 
-                {/* Package Name */}
-                <h4 className="text-xl font-light mb-4 group-hover:text-white transition-colors duration-300">
+            <div className="p-7 flex flex-col flex-1">
+                {/* Name */}
+                <h4 className={`text-lg font-semibold mb-1 ${isRecommended ? "text-gold" : "text-white"}`}>
                     {pkg.name}
                 </h4>
 
-                {/* Lesson Count */}
+                {/* Lesson count */}
                 <div className="mb-4">
-                    <div className="text-3xl font-light text-white mb-1">
-                        {totalLessons} <span className="text-lg text-gray-400">堂</span>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-5xl font-extralight text-white">{total}</span>
+                        <span className="text-xl text-gray-400 font-light">堂</span>
                     </div>
                     {hasBonus && (
-                        <div className="text-xs text-zinc-500 italic">
+                        <p className="text-xs text-gold/60 mt-1">
                             實付 {pkg.lessonCount} 堂 + 贈 {pkg.bonusLessons} 堂
-                        </div>
+                        </p>
                     )}
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-gradient-to-r from-white/10 via-white/30 to-white/10 mb-4" />
+                <div className={`h-px mb-5 ${isRecommended ? "bg-gold/25" : "bg-white/8"}`} />
 
                 {/* Highlights */}
                 {pkg.highlights && pkg.highlights.length > 0 && (
-                    <div className="mb-4 space-y-2">
-                        {pkg.highlights.map((highlight, idx) => (
-                            <div key={idx} className="flex items-start gap-2 text-sm text-gray-400">
-                                <Check size={16} className="text-white/60 mt-0.5 flex-shrink-0" />
-                                <span>{highlight}</span>
+                    <div className="mb-5 space-y-2 flex-1">
+                        {pkg.highlights.map((h, i) => (
+                            <div key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
+                                <Check
+                                    size={14}
+                                    className={`mt-0.5 flex-shrink-0 ${isRecommended ? "text-gold" : "text-white/50"}`}
+                                />
+                                <span>{h}</span>
                             </div>
                         ))}
                     </div>
                 )}
 
-                {/* Key Info */}
-                <div className="space-y-2 mb-4 text-sm mt-auto pb-4">
-                    <div className="flex justify-between text-gray-500">
-                        <span>有效期限</span>
+                {/* Meta info */}
+                <div className="space-y-2.5 mb-5 text-sm">
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-500">有效期限</span>
                         <span className="text-gray-300">{pkg.validDuration} 個月</span>
                     </div>
-                    <div className="flex justify-between text-gray-500">
-                        <span>首堂時間</span>
-                        <span className="text-gray-300">{formatDate(pkg.firstClassDate)}</span>
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-500 flex items-center gap-1.5">
+                            <CalendarDays size={13} />
+                            下期開課
+                        </span>
+                        <span className={`font-medium ${isRecommended ? "text-gold" : "text-white"}`}>
+                            {formatDate(pkg.firstClassDate)}
+                        </span>
                     </div>
                 </div>
 
-                {/* Formation Warning */}
+                {/* Formation warning */}
                 {pkg.formationRequired && (
-                    <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded text-xs text-gray-400 flex items-start gap-2">
-                        <AlertTriangle size={14} className="mt-0.5 flex-shrink-0" />
-                        <span>
-                            開課前 {pkg.formationDecisionDays} 天確認是否成班
-                        </span>
+                    <div className="mb-4 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-400 flex items-center gap-2">
+                        <AlertTriangle size={12} className="flex-shrink-0" />
+                        開課前 {pkg.formationDecisionDays} 天確認是否成班
                     </div>
                 )}
 
-                {/* Equipment Included */}
+                {/* Equipment */}
                 {pkg.includedEquipment && pkg.includedEquipment.length > 0 && (
-                    <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded text-xs text-gray-400">
-                        <div className="font-medium mb-1 text-gray-300">包含器材：</div>
-                        <div className="flex flex-wrap gap-1">
-                            {pkg.includedEquipment.map((item, idx) => (
-                                <span key={idx}>
-                                    {item}{idx < pkg.includedEquipment!.length - 1 && "、"}
-                                </span>
-                            ))}
-                        </div>
+                    <div className="mb-4 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-gray-300">
+                        <span className="text-gray-500">含器材：</span>
+                        {pkg.includedEquipment.join("、")}
                     </div>
                 )}
 
                 {/* Price */}
-                <div className="mb-6 pt-2 border-t border-white/5">
-                    <div className="text-3xl font-light text-white">
+                <div className={`pt-4 mb-5 border-t ${isRecommended ? "border-gold/20" : "border-white/8"}`}>
+                    <div className="text-4xl font-light text-white">
                         NT$ {pkg.price.toLocaleString()}
                     </div>
-                    {hasBonus && (
-                        <div className="text-xs text-zinc-600">
-                            每堂約 NT$ {Math.round(pkg.price / totalLessons).toLocaleString()}
-                        </div>
-                    )}
+                    <div className="text-xs text-gray-500 mt-1">
+                        每堂約 NT$ {perLesson.toLocaleString()}
+                    </div>
                 </div>
-            </div>
 
-            {/* CTA Button */}
-            <motion.button
-                onClick={() => onSelect?.(pkg)}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                className="w-full bg-black text-white border border-white/40 py-4 rounded-xl font-bold uppercase tracking-wider hover:bg-white/5 transition-all duration-300 shadow-xl"
-            >
-                選擇方案
-            </motion.button>
+                {/* CTA */}
+                <motion.button
+                    onClick={() => onSelect?.(pkg)}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className={`w-full py-4 rounded-xl font-bold text-sm tracking-widest transition-all duration-300
+                        ${isRecommended
+                            ? "bg-gold text-black hover:bg-yellow-400 shadow-[0_4px_20px_rgba(212,175,55,0.35)]"
+                            : "bg-transparent border border-white/30 text-white hover:bg-white/8 hover:border-white/60"
+                        }`}
+                >
+                    立即報名
+                </motion.button>
+            </div>
         </motion.div>
     );
 }

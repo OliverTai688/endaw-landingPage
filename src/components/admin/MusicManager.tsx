@@ -47,6 +47,7 @@ interface InstrumentForm {
     equipmentDescription: string;
     rentalAvailable: boolean;
     rentalOffsetAllowed: boolean;
+    rentalPrice: number | string;
     status: PublishStatus;
     levels: LevelForm[];
     faqs: FAQForm[];
@@ -62,6 +63,7 @@ interface InstrumentData {
     equipmentDescription: string | null;
     rentalAvailable: boolean;
     rentalOffsetAllowed: boolean;
+    rentalPrice: number;
     status: PublishStatus;
     levels: any[];
     faqs: any[];
@@ -76,7 +78,7 @@ const emptyPackage: PackageForm = {
 const emptyForm: InstrumentForm = {
     name: '', nameEn: '', coverImage: '', description: '',
     containsEquipment: false, equipmentDescription: '',
-    rentalAvailable: false, rentalOffsetAllowed: false,
+    rentalAvailable: false, rentalOffsetAllowed: false, rentalPrice: 0,
     status: PublishStatus.DRAFT,
     levels: [], faqs: [],
 };
@@ -133,6 +135,7 @@ export function MusicManager() {
             equipmentDescription: inst.equipmentDescription || '',
             rentalAvailable: inst.rentalAvailable,
             rentalOffsetAllowed: inst.rentalOffsetAllowed,
+            rentalPrice: inst.rentalPrice ?? 0,
             status: inst.status || PublishStatus.DRAFT,
             levels: (inst.levels || []).map((level: any) => ({
                 name: level.name,
@@ -200,6 +203,7 @@ export function MusicManager() {
                 equipmentDescription: form.equipmentDescription || null,
                 rentalAvailable: form.rentalAvailable,
                 rentalOffsetAllowed: form.rentalOffsetAllowed,
+                rentalPrice: Number(form.rentalPrice) || 0,
                 status: form.status,
                 levels: form.levels.map((level) => ({
                     name: level.name,
@@ -346,7 +350,7 @@ export function MusicManager() {
                                                     <span className="px-2 py-1 rounded-md text-[10px] font-bold backdrop-blur-md border bg-green-500/10 text-green-400 border-green-500/20 w-max">含器材</span>
                                                 )}
                                             </div>
-                                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                                            <div className="absolute inset-0 bg-black/60 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
                                                 <button onClick={() => window.open(`/music/${inst.nameEn}?preview=true`, '_blank')} className="p-3 bg-white/10 text-white rounded-full hover:bg-blue-500/30 border border-white/20 transition-colors" title="預覽">
                                                     <Eye size={20} />
                                                 </button>
@@ -445,10 +449,22 @@ export function MusicManager() {
                                         </Field>
                                     )}
                                     {form.rentalAvailable && (
-                                        <label className="flex items-center gap-3 cursor-pointer col-span-2">
-                                            <input type="checkbox" checked={form.rentalOffsetAllowed} onChange={(e) => updateField('rentalOffsetAllowed', e.target.checked)} className="rounded border-white/10 bg-black/50" />
-                                            <span className="text-sm text-gray-300">租金可折抵購買</span>
-                                        </label>
+                                        <>
+                                            <Field label="租借費用（TWD）">
+                                                <input
+                                                    type="number"
+                                                    min={0}
+                                                    value={form.rentalPrice}
+                                                    onChange={(e) => updateField('rentalPrice', e.target.value)}
+                                                    placeholder="0"
+                                                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50 transition-colors"
+                                                />
+                                            </Field>
+                                            <label className="flex items-center gap-3 cursor-pointer col-span-2">
+                                                <input type="checkbox" checked={form.rentalOffsetAllowed} onChange={(e) => updateField('rentalOffsetAllowed', e.target.checked)} className="rounded border-white/10 bg-black/50" />
+                                                <span className="text-sm text-gray-300">租金可折抵購買</span>
+                                            </label>
+                                        </>
                                     )}
                                 </div>
 
@@ -512,10 +528,26 @@ export function MusicManager() {
                                                                     <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
                                                                 </div>
                                                             </Field>
-                                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                                <input type="checkbox" checked={pkg.formationRequired} onChange={(e) => updatePackage(li, pi, { formationRequired: e.target.checked })} className="rounded border-white/10 bg-black/50" />
-                                                                <span className="text-xs text-gray-300">需成班</span>
-                                                            </label>
+                                                            <div className="flex items-center gap-3">
+                                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                                    <input type="checkbox" checked={pkg.formationRequired} onChange={(e) => updatePackage(li, pi, { formationRequired: e.target.checked, formationDecisionDays: e.target.checked ? (pkg.formationDecisionDays || 3) : 0 })} className="rounded border-white/10 bg-black/50" />
+                                                                    <span className="text-xs text-gray-300">需成班</span>
+                                                                </label>
+                                                                {pkg.formationRequired && (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <span className="text-xs text-gray-500">開課前</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            min={1}
+                                                                            max={30}
+                                                                            value={pkg.formationDecisionDays}
+                                                                            onChange={(e) => updatePackage(li, pi, { formationDecisionDays: e.target.value })}
+                                                                            className="w-14 bg-black/50 border border-white/10 rounded-lg px-2 py-1 text-white text-xs text-center focus:outline-none focus:border-gold/50 transition-colors"
+                                                                        />
+                                                                        <span className="text-xs text-gray-500">天確認</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                             <Field label="亮點（逗號分隔）" className="col-span-2">
                                                                 <input type="text" value={pkg.highlights} onChange={(e) => updatePackage(li, pi, { highlights: e.target.value })} placeholder="買五送一, 三個月完成" className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-gold/50 transition-colors" />
                                                             </Field>

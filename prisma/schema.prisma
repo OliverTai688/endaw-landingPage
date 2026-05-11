@@ -65,6 +65,50 @@ enum OrderStatus {
   REFUNDED
 }
 
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  EXPIRED
+  SUSPENDED
+}
+
+enum EmailTemplateType {
+  ORDER_CONFIRMATION_ORDERER
+  ORDER_CONFIRMATION_ATTENDEE
+}
+
+enum EmailStatus {
+  SENT
+  FAILED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  SELECT
+  CHECKBOX
+  RADIO
+  DATE
+}
+
+enum FieldScope {
+  ORDER
+  ATTENDEE
+}
+
+enum InvoiceType {
+  PERSONAL
+  COMPANY
+  DONATE
+}
+
+enum CarruerType {
+  NONE
+  PHONE
+  CITIZEN
+}
+
+
 // ============================================================
 // Content Management (existing)
 // ============================================================
@@ -84,9 +128,10 @@ model Content {
   updatedAt     DateTime      @updatedAt
 
   // Relationships
-  workshop      Workshop?
-  music         MusicMetadata?
-  revisions     ContentRevision[]
+  workshop            Workshop?
+  music               MusicMetadata?
+  revisions           ContentRevision[]
+  registrationFields  RegistrationField[]
 }
 
 model Workshop {
@@ -170,10 +215,11 @@ model Customer {
   name      String
   email     String   @unique
   phone     String?
-  notes     String?  @db.Text
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes       String?            @db.Text
+  orders      Order[]
+  enrollments MusicEnrollment[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 }
 
 model Order {
@@ -189,6 +235,7 @@ model Order {
   currency        String        @default("TWD")
   discount        Int           @default(0)
   totalAmount     Int
+  quantity        Int           @default(1)
   status          OrderStatus   @default(PENDING_PAYMENT)
   paymentStatus   PaymentStatus @default(PENDING)
   paymentMethod   String?
@@ -197,8 +244,30 @@ model Order {
   transactionId   String?
   paidAt          DateTime?
   adminNotes      String?       @db.Text
+
+  // Orderer B2B / B2C info
+  orderMode       String?       // "B2C" | "B2B"
+  companyName     String?
+  taxId           String?       // 統一編號
+  companyAddress  String?
+
+  // E-invoice
+  invoiceType     InvoiceType?
+  carruerType     CarruerType?
+  carruerNum      String?       // 手機載具 or 自然人憑證條碼
+  donationCode    String?       // 捐贈碼 (LoveCode)
+
+  // Instrument rental (music orders only)
+  rentalRequested Boolean       @default(false)
+  rentalAmount    Int           @default(0)
+
+  // Custom registration field answers (order-level)
+  fieldValues     Json?
+
   refunds         Refund[]
-  payments        Payment[]     // ECPay payment records
+  payments        Payment[]
+  attendees       Attendee[]
+  enrollment      MusicEnrollment?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 }
@@ -293,6 +362,7 @@ model MusicInstrument {
   equipmentDescription String?
   rentalAvailable      Boolean      @default(false)
   rentalOffsetAllowed  Boolean      @default(false)
+  rentalPrice          Int          @default(0)
   status               PublishStatus @default(DRAFT)
   levels               MusicLevel[]
   faqs                 MusicFAQ[]
@@ -326,6 +396,7 @@ model MusicPackage {
   status                 PublishStatus @default(DRAFT)
   includedEquipment      String[]
   highlights             String[]
+  enrollments            MusicEnrollment[]
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
 }
@@ -371,5 +442,84 @@ model ContentRevision {
   content   Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
   data      Json
   editedBy  String?
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// Music Enrollments (per-student package activation)
+// ============================================================
+
+model MusicEnrollment {
+  id          String           @id @default(cuid())
+  orderId     String           @unique
+  order       Order            @relation(fields: [orderId], references: [id])
+  customerId  String
+  customer    Customer         @relation(fields: [customerId], references: [id])
+  packageId   String
+  package     MusicPackage     @relation(fields: [packageId], references: [id])
+  startDate   DateTime
+  expiryDate  DateTime
+  status      EnrollmentStatus @default(PENDING)
+  adminNotes  String?          @db.Text
+  activatedBy String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+// ============================================================
+// Email Templates & Logs
+// ============================================================
+
+model EmailTemplate {
+  id        String            @id @default(cuid())
+  type      EmailTemplateType @unique
+  subject   String
+  body      String            @db.Text
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model EmailLog {
+  id           String      @id @default(cuid())
+  orderId      String?
+  toEmail      String
+  toName       String?
+  subject      String
+  templateType String?
+  status       EmailStatus
+  error        String?     @db.Text
+  sentAt       DateTime?
+  createdAt    DateTime    @default(now())
+}
+
+// ============================================================
+// Registration Fields & Attendees
+// ============================================================
+
+model RegistrationField {
+  id          String     @id @default(cuid())
+  contentId   String
+  content     Content    @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  label       String
+  labelEn     String?
+  type        FieldType  @default(TEXT)
+  required    Boolean    @default(false)
+  options     String[]
+  placeholder String?
+  scope       FieldScope @default(ORDER)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Attendee {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name      String
+  email     String?
+  phone     String?
+  metadata  Json?
+  sortOrder Int      @default(0)
   createdAt DateTime @default(now())
 }

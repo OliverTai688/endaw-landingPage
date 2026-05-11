@@ -75,6 +75,24 @@ export function generateMerchantTradeNo(): string {
 
 // ─── Checkout form builder ─────────────────────────────────────────────────────
 
+export interface InvoiceParams {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerAddr: string;
+  /** 統一編號 — 8 digits for B2B, empty for B2C */
+  customerIdentifier: string;
+  /** PERSONAL | COMPANY | DONATE */
+  invoiceType: string;
+  /** NONE | PHONE | CITIZEN */
+  carruerType: string;
+  carruerNum: string;
+  donationCode: string;
+  itemName: string;
+  totalAmount: number;
+  merchantTradeNo: string;
+}
+
 export interface CheckoutParams {
   merchantTradeNo: string;
   /** Product description shown on ECPay page (max 200 chars) */
@@ -85,12 +103,55 @@ export interface CheckoutParams {
   tradeDesc: string;
   /** MerchantTradeDate format: yyyy/MM/dd HH:mm:ss */
   merchantTradeDate: string;
+  invoice?: InvoiceParams;
+}
+
+/**
+ * Formats order invoice data into ECPay invoice form params.
+ * These are appended as hidden fields to the payment form so ECPay
+ * issues an e-invoice automatically upon successful payment.
+ *
+ * CarruerType mapping: NONE→"" | PHONE→"1" | CITIZEN→"2"
+ * InvType: 07=general, 08=donation
+ */
+export function buildInvoiceParams(order: {
+  customer: { name: string; email: string; phone?: string | null };
+  taxId?: string | null;
+  companyName?: string | null;
+  companyAddress?: string | null;
+  invoiceType?: string | null;
+  carruerType?: string | null;
+  carruerNum?: string | null;
+  donationCode?: string | null;
+  orderMode?: string | null;
+  totalAmount: number;
+  orderNumber: string;
+}): InvoiceParams {
+  const ecpayCarruerType =
+    order.carruerType === 'PHONE' ? '1' :
+    order.carruerType === 'CITIZEN' ? '2' : '';
+
+  return {
+    customerName: order.companyName || order.customer.name,
+    customerEmail: order.customer.email,
+    customerPhone: order.customer.phone || '',
+    customerAddr: order.companyAddress || '',
+    customerIdentifier: order.taxId || '',
+    invoiceType: order.invoiceType || 'PERSONAL',
+    carruerType: ecpayCarruerType,
+    carruerNum: order.carruerNum || '',
+    donationCode: order.donationCode || '',
+    itemName: `ENDAW-${order.orderNumber}`,
+    totalAmount: order.totalAmount,
+    merchantTradeNo: order.orderNumber,
+  };
 }
 
 /**
  * Builds the HTML auto-submit form string for ECPay Credit Card redirect.
- * Returns the raw HTML string from node-ecpay-aio's checkout().
- * Frontend should inject this into DOM and call form.submit().
+ * If invoice params are provided, injects them as hidden fields so ECPay
+ * issues an e-invoice automatically upon successful payment.
+ * Frontend should inject the returned HTML into DOM; it auto-submits.
  */
 export async function buildCheckoutForm(params: CheckoutParams): Promise<string> {
   const merchant = getMerchant();
@@ -104,18 +165,17 @@ export async function buildCheckoutForm(params: CheckoutParams): Promise<string>
       TotalAmount: params.totalAmount,
       TradeDesc: params.tradeDesc,
       ItemName: params.itemName,
-      // Server-to-server callback — source of truth for payment status
       ReturnURL: `${appUrl}/api/payments/ecpay/callback`,
-      // Client-facing redirect after payment (display only, not source of truth)
       OrderResultURL: `${appUrl}/payment/result`,
-      // "Return to store" button on ECPay page
       ClientBackURL: `${appUrl}/payment/result`,
     },
-    {} // CreditOneTimePayment-specific params (empty = defaults)
+    {}
   );
 
-  // checkout() returns an HTML string containing a hidden form that auto-submits to ECPay
-  return payment.checkout();
+  // E-invoice is issued separately via ECPay Invoice API after payment confirmation.
+  // Injecting invoice params into the payment form breaks CheckMacValue because
+  // node-ecpay-aio signs only the payment params, but ECPay re-signs all submitted fields.
+  return await payment.checkout();
 }
 
 // ─── Callback verification ─────────────────────────────────────────────────────

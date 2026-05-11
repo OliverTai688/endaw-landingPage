@@ -13,9 +13,13 @@ import {
     Clock,
     CreditCard,
     MapPin,
-    Hash
+    Hash,
+    Music2,
+    GraduationCap,
+    X,
+    Calendar,
 } from 'lucide-react';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus, OrderType } from '@prisma/client';
 import { useOrders } from '../providers/OrderProvider';
 import { DBStatusBadge } from './DBStatusBadge';
 
@@ -34,6 +38,13 @@ export function OrderManager() {
     const [filter, setFilter] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState("");
 
+    // Activation modal state
+    const [activateOrder, setActivateOrder] = useState<any | null>(null);
+    const [activateStartDate, setActivateStartDate] = useState('');
+    const [activateNotes, setActivateNotes] = useState('');
+    const [isActivating, setIsActivating] = useState(false);
+    const [activatedIds, setActivatedIds] = useState<Set<string>>(new Set());
+
     useEffect(() => {
         fetchOrders(filter);
     }, [filter]);
@@ -43,6 +54,35 @@ export function OrderManager() {
         o.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         o.customer.email.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const handleActivate = async () => {
+        if (!activateOrder || !activateStartDate) return;
+        setIsActivating(true);
+        try {
+            const res = await fetch('/api/bff/v1/admin/enrollments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: activateOrder.id,
+                    customerId: activateOrder.customer.id,
+                    packageId: activateOrder.musicPackageId,
+                    startDate: activateStartDate,
+                    adminNotes: activateNotes || null,
+                }),
+            });
+            const json = await res.json();
+            if (json.success) {
+                setActivatedIds(prev => new Set(prev).add(activateOrder.id));
+                setActivateOrder(null);
+                setActivateStartDate('');
+                setActivateNotes('');
+            } else {
+                alert('啟用失敗：' + (json.error || '未知錯誤'));
+            }
+        } finally {
+            setIsActivating(false);
+        }
+    };
 
     return (
         <div className="flex flex-col h-full bg-black text-white font-sans">
@@ -103,7 +143,7 @@ export function OrderManager() {
                         </div>
                     </div>
 
-                {/* Main Pipeline View */}
+                    {/* Main Pipeline View */}
                 <div className="flex-1 overflow-auto p-4 md:p-6 bg-zinc-950/20">
                     <div className="max-w-6xl mx-auto space-y-4">
                         <AnimatePresence mode="popLayout">
@@ -121,6 +161,8 @@ export function OrderManager() {
                                         key={order.id} 
                                         order={order} 
                                         onUpdateStatus={updateStatus}
+                                        onActivate={(o: any) => { setActivateOrder(o); setActivateStartDate(new Date().toISOString().substring(0, 10)); }}
+                                        isActivated={activatedIds.has(order.id)}
                                         index={idx}
                                     />
                                 ))
@@ -130,6 +172,63 @@ export function OrderManager() {
                 </div>
                 </div>
             </div>
+
+            {/* Activate Package Modal */}
+            <AnimatePresence>
+                {activateOrder && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setActivateOrder(null)}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="relative w-full max-w-md bg-zinc-900 border border-white/10 rounded-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-medium flex items-center gap-2"><GraduationCap size={20} className="text-gold" /> 啟用學員套票</h3>
+                                    <p className="text-xs text-gray-500 mt-1">訂單 #{activateOrder.orderNumber} · {activateOrder.customer.name}</p>
+                                </div>
+                                <button onClick={() => setActivateOrder(null)} className="p-2 hover:bg-white/10 rounded-full"><X size={18} className="text-gray-400" /></button>
+                            </div>
+                            <div className="p-6 space-y-5">
+                                {!activateOrder.musicPackageId && (
+                                    <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm">
+                                        ⚠ 此訂單未關聯套票 ID，請先確認訂單資料正確。
+                                    </div>
+                                )}
+                                <div className="space-y-2">
+                                    <label className="text-xs text-gray-400 uppercase tracking-widest font-bold flex items-center gap-2"><Calendar size={12} /> 開始上課日期</label>
+                                    <input type="date" value={activateStartDate} onChange={(e) => setActivateStartDate(e.target.value)}
+                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold/50"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs text-gray-400 uppercase tracking-widest font-bold">管理員備注 (選填)</label>
+                                    <textarea rows={2} value={activateNotes} onChange={(e) => setActivateNotes(e.target.value)}
+                                        placeholder="例如：已確認收款、電話確認學員..." 
+                                        className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-gold/50 resize-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="p-6 border-t border-white/10 flex gap-3">
+                                <button onClick={() => setActivateOrder(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-gray-400 text-sm">取消</button>
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                    onClick={handleActivate}
+                                    disabled={isActivating || !activateStartDate || !activateOrder.musicPackageId}
+                                    className="flex-1 py-3 rounded-xl bg-gold text-black font-bold text-sm shadow-lg shadow-gold/20 disabled:opacity-40"
+                                >
+                                    {isActivating ? '處理中...' : '確認啟用'}
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
@@ -175,8 +274,12 @@ function FilterButton({ active, onClick, label, status, count }: any) {
     );
 }
 
-function OrderCard({ order, onUpdateStatus, index }: any) {
+function OrderCard({ order, onUpdateStatus, onActivate, isActivated, index }: any) {
     const config = STATUS_CONFIG[order.status as OrderStatus];
+    const isMusicOrder = order.orderType === 'MUSIC';
+    const canActivate = isMusicOrder && 
+        (order.status === OrderStatus.PAID || order.status === OrderStatus.PROCESSING) && 
+        !isActivated;
     
     return (
         <motion.div
@@ -268,6 +371,19 @@ function OrderCard({ order, onUpdateStatus, index }: any) {
                                 label="確認送達"
                                 color="bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20"
                              />
+                        )}
+                        {canActivate && (
+                            <ActionButton
+                                onClick={() => onActivate(order)}
+                                icon={<GraduationCap size={18} />}
+                                label="啟用套票"
+                                color="bg-gold hover:bg-yellow-400 shadow-gold/20"
+                            />
+                        )}
+                        {isActivated && (
+                            <span className="text-xs text-emerald-400 flex items-center gap-1 px-3 py-2 bg-emerald-400/10 rounded-xl border border-emerald-400/20">
+                                <CheckCircle2 size={14} /> 已啟用
+                            </span>
                         )}
                     </AnimatePresence>
                     

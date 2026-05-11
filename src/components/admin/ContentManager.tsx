@@ -613,6 +613,10 @@ export function ContentManager() {
                                         onChange={(html) => setEditingItem({ ...editingItem, description: html })}
                                     />
                                 </div>
+
+                                {/* Registration Field Builder */}
+                                <RegistrationFieldBuilder contentId={editingItem.id} />
+
                                 <div className="flex gap-4 pt-4">
                                     <button
                                         onClick={() => {
@@ -639,6 +643,186 @@ export function ContentManager() {
             </AnimatePresence>
         </div >
     );
+}
+
+// ─── Registration Field Builder ───────────────────────────────────────────────
+
+interface RegField {
+  id: string;
+  label: string;
+  type: "TEXT" | "TEXTAREA" | "SELECT" | "CHECKBOX" | "RADIO" | "DATE";
+  required: boolean;
+  options: string[];
+  placeholder: string;
+  scope: "ORDER" | "ATTENDEE";
+  sortOrder: number;
+}
+
+const FIELD_TYPE_LABELS: Record<RegField["type"], string> = {
+  TEXT: "單行文字",
+  TEXTAREA: "多行文字",
+  SELECT: "下拉選單",
+  CHECKBOX: "多選框",
+  RADIO: "單選",
+  DATE: "日期",
+};
+
+function emptyField(): Omit<RegField, "id"> {
+  return { label: "", type: "TEXT", required: false, options: [], placeholder: "", scope: "ORDER", sortOrder: 0 };
+}
+
+function RegistrationFieldBuilder({ contentId }: { contentId: string }) {
+  const [fields, setFields] = useState<RegField[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState<Omit<RegField, "id">>(emptyField());
+  const [editId, setEditId] = useState<string | null>(null);
+  const [optionInput, setOptionInput] = useState("");
+
+  useEffect(() => {
+    if (!contentId) return;
+    fetch(`/api/bff/v1/admin/content/${contentId}/fields`)
+      .then((r) => r.json())
+      .then((json) => { if (json.success) setFields(json.data); })
+      .catch(console.error);
+  }, [contentId]);
+
+  async function saveNew() {
+    if (!draft.label.trim()) return;
+    const res = await fetch(`/api/bff/v1/admin/content/${contentId}/fields`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...draft, sortOrder: fields.length }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setFields((prev) => [...prev, json.data]);
+      setDraft(emptyField());
+      setOptionInput("");
+      setAdding(false);
+    }
+  }
+
+  async function saveEdit(id: string) {
+    const res = await fetch(`/api/bff/v1/admin/content/${contentId}/fields?fieldId=${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setFields((prev) => prev.map((f) => (f.id === id ? json.data : f)));
+      setEditId(null);
+    }
+  }
+
+  async function deleteField(id: string) {
+    if (!confirm("確定刪除此欄位？")) return;
+    await fetch(`/api/bff/v1/admin/content/${contentId}/fields?fieldId=${id}`, { method: "DELETE" });
+    setFields((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  function startEdit(field: RegField) {
+    setEditId(field.id);
+    setDraft({ label: field.label, type: field.type, required: field.required, options: field.options, placeholder: field.placeholder, scope: field.scope, sortOrder: field.sortOrder });
+    setOptionInput(field.options.join(", "));
+    setAdding(false);
+  }
+
+  const inputCls = "w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold/50 transition-colors";
+
+  function FieldForm({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
+    const needsOptions = ["SELECT", "CHECKBOX", "RADIO"].includes(draft.type);
+    return (
+      <div className="border border-gold/20 rounded-xl p-4 space-y-3 bg-gold/5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2">
+            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">欄位名稱 *</label>
+            <input className={inputCls} value={draft.label} onChange={(e) => setDraft((d) => ({ ...d, label: e.target.value }))} placeholder="如：飲食需求" />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">類型</label>
+            <select className={`${inputCls} bg-black`} value={draft.type} onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value as RegField["type"] }))}>
+              {Object.entries(FIELD_TYPE_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">填寫對象</label>
+            <select className={`${inputCls} bg-black`} value={draft.scope} onChange={(e) => setDraft((d) => ({ ...d, scope: e.target.value as RegField["scope"] }))}>
+              <option value="ORDER">整筆訂單</option>
+              <option value="ATTENDEE">每位參加人</option>
+            </select>
+          </div>
+          <div className="col-span-2">
+            <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">提示文字（選填）</label>
+            <input className={inputCls} value={draft.placeholder} onChange={(e) => setDraft((d) => ({ ...d, placeholder: e.target.value }))} placeholder="輸入提示文字" />
+          </div>
+          {needsOptions && (
+            <div className="col-span-2">
+              <label className="text-[10px] text-gray-500 uppercase tracking-widest block mb-1">選項（逗號分隔）</label>
+              <input
+                className={inputCls}
+                value={optionInput}
+                onChange={(e) => {
+                  setOptionInput(e.target.value);
+                  setDraft((d) => ({ ...d, options: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) }));
+                }}
+                placeholder="選項A, 選項B, 選項C"
+              />
+            </div>
+          )}
+          <div className="col-span-2 flex items-center gap-2">
+            <input type="checkbox" id="req-check" checked={draft.required} onChange={(e) => setDraft((d) => ({ ...d, required: e.target.checked }))} className="accent-gold" />
+            <label htmlFor="req-check" className="text-xs text-gray-400 cursor-pointer">必填欄位</label>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button type="button" onClick={onCancel} className="px-3 py-1.5 text-xs text-gray-400 border border-white/10 rounded-lg hover:text-white transition-colors">取消</button>
+          <button type="button" onClick={onSave} disabled={!draft.label.trim()} className="px-4 py-1.5 text-xs bg-gold text-black rounded-lg font-medium hover:brightness-110 transition-all disabled:opacity-40">儲存欄位</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t border-white/5 pt-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-[10px] uppercase tracking-widest text-gold font-bold">報名自定義欄位</h3>
+        {!adding && !editId && (
+          <button type="button" onClick={() => { setAdding(true); setDraft(emptyField()); setOptionInput(""); }} className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gold border border-white/10 hover:border-gold/40 px-2.5 py-1.5 rounded-lg transition-all">
+            <Plus size={11} /> 新增欄位
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2 mb-3">
+        {fields.length === 0 && !adding && (
+          <p className="text-xs text-gray-600 py-2">尚無自定義欄位</p>
+        )}
+        {fields.map((f) => (
+          <div key={f.id}>
+            {editId === f.id ? (
+              <FieldForm onSave={() => saveEdit(f.id)} onCancel={() => setEditId(null)} />
+            ) : (
+              <div className="flex items-center justify-between bg-white/3 border border-white/8 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[10px] bg-white/10 text-gray-400 px-1.5 py-0.5 rounded">{FIELD_TYPE_LABELS[f.type]}</span>
+                  <span className="text-xs text-gray-200 truncate">{f.label}</span>
+                  {f.required && <span className="text-[10px] text-red-400">必填</span>}
+                  <span className="text-[10px] text-gray-600">{f.scope === "ATTENDEE" ? "每人" : "整單"}</span>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button type="button" onClick={() => startEdit(f)} className="p-1 text-gray-500 hover:text-gold transition-colors"><Edit size={12} /></button>
+                  <button type="button" onClick={() => deleteField(f.id)} className="p-1 text-gray-500 hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {adding && <FieldForm onSave={saveNew} onCancel={() => setAdding(false)} />}
+    </div>
+  );
 }
 
 function TabButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {

@@ -7,9 +7,7 @@ import {
     ArrowLeft,
     CreditCard,
     Mail,
-    Phone,
     User,
-    Calendar,
     Tag,
     RotateCcw,
     Send,
@@ -18,6 +16,9 @@ import {
     Hash,
     ExternalLink,
     ChevronDown,
+    Users,
+    Building2,
+    FileText,
 } from "lucide-react";
 import { OrderStatus, PaymentStatus } from "@prisma/client";
 import { useOrders } from "@/components/providers/OrderProvider";
@@ -94,7 +95,7 @@ export default function OrderDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
-    const { fetchOrderById, updateStatus } = useOrders();
+    const { fetchOrderById } = useOrders();
 
     const [order, setOrder] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -268,6 +269,99 @@ export default function OrderDetailPage() {
                                 <p className="text-lg font-light text-gold">NT${order.totalAmount.toLocaleString()}</p>
                             </div>
                         </motion.div>
+
+                        {/* B2B info card */}
+                        {order.orderMode === "B2B" && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.22 }}
+                                className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
+                            >
+                                <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
+                                    <span className="w-1 h-4 bg-indigo-400 rounded-full" />
+                                    企業訂購資訊
+                                </h2>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    {[
+                                        { icon: <Building2 size={13} />, label: "公司", value: order.companyName },
+                                        { icon: <Hash size={13} />, label: "統一編號", value: order.taxId },
+                                        { icon: <Tag size={13} />, label: "公司地址", value: order.companyAddress },
+                                        { icon: <FileText size={13} />, label: "發票類型", value: order.invoiceType },
+                                    ].filter(r => r.value).map(({ icon, label, value }) => (
+                                        <div key={label} className="flex items-start gap-2 text-gray-300">
+                                            <span className="text-gray-500 mt-0.5">{icon}</span>
+                                            <div>
+                                                <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+                                                <p>{value}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Attendees card */}
+                        {order.attendees && order.attendees.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.23 }}
+                                className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
+                            >
+                                <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
+                                    <span className="w-1 h-4 bg-teal-400 rounded-full" />
+                                    <Users size={14} className="text-teal-400" />
+                                    參加人資訊（{order.attendees.length} 位）
+                                </h2>
+                                <div className="space-y-4">
+                                    {order.attendees.map((a: any, i: number) => (
+                                        <div key={a.id} className="border border-white/5 rounded-xl p-4">
+                                            <p className="text-[10px] uppercase tracking-widest text-teal-400/70 mb-2">參加人 {i + 1}</p>
+                                            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                                                <div className="flex items-center gap-2 text-gray-300"><User size={12} className="text-gray-500" />{a.name}</div>
+                                                {a.phone && <div className="flex items-center gap-2 text-gray-300 text-xs text-gray-400">{a.phone}</div>}
+                                                {a.email && <div className="flex items-center gap-2 text-gray-300 col-span-2"><Mail size={12} className="text-gray-500" />{a.email}</div>}
+                                            </div>
+                                            {a.metadata && Object.keys(a.metadata).length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-white/5 space-y-1">
+                                                    {Object.entries(a.metadata as Record<string, string>).map(([k, v]) => (
+                                                        <div key={k} className="flex justify-between text-xs">
+                                                            <span className="text-gray-500">{k}</span>
+                                                            <span className="text-gray-300">{v}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Order-level custom fields */}
+                        {order.fieldValues && Object.keys(order.fieldValues).length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.24 }}
+                                className="bg-zinc-900/40 backdrop-blur-md border border-white/5 rounded-2xl p-6"
+                            >
+                                <h2 className="text-sm font-light mb-4 flex items-center gap-2 text-gray-400">
+                                    <span className="w-1 h-4 bg-violet-400 rounded-full" />
+                                    <FileText size={14} className="text-violet-400" />
+                                    課程額外資訊
+                                </h2>
+                                <div className="space-y-2">
+                                    {Object.entries(order.fieldValues as Record<string, string>).map(([k, v]) => (
+                                        <div key={k} className="flex justify-between text-sm py-1.5 border-b border-white/5 last:border-0">
+                                            <span className="text-gray-500">{k}</span>
+                                            <span className="text-gray-300">{v}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* Payment Records Section - Phase 2A */}
                         <motion.div

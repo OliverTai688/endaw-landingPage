@@ -12,6 +12,7 @@ import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import {
   buildCheckoutForm,
+  buildInvoiceParams,
   generateMerchantTradeNo,
   getECPayTradeDate,
 } from '@/lib/ecpay';
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
           include: { product: { select: { name: true } } },
         },
       },
+      // Note: Prisma select/include are merged — extra scalar fields come automatically
     });
 
     if (!order) {
@@ -94,6 +96,11 @@ export async function POST(request: NextRequest) {
     // Truncate to ECPay limit
     if (itemName.length > 400) itemName = itemName.slice(0, 397) + '...';
 
+    // ── 3b. Build e-invoice params (only if invoice type is set on the order) ─
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const orderAny = order as any;
+    const invoiceParams = orderAny.invoiceType ? buildInvoiceParams(orderAny) : undefined;
+
     // ── 4. Generate unique MerchantTradeNo ───────────────────────────────────
     // ECPay constraint: max 20 chars, alphanumeric, globally unique
     const merchantTradeNo = generateMerchantTradeNo();
@@ -117,6 +124,7 @@ export async function POST(request: NextRequest) {
       totalAmount: order.totalAmount,
       tradeDesc: `ENDAW Order ${order.orderNumber}`,
       merchantTradeDate,
+      invoice: invoiceParams,
     });
 
     return NextResponse.json({ success: true, htmlForm });

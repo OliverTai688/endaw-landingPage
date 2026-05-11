@@ -13,6 +13,8 @@ import {
     LogOut,
     Calendar,
     Music2,
+    GraduationCap,
+    Mail,
 } from "lucide-react";
 
 interface NavItem {
@@ -46,12 +48,14 @@ const navSections: NavSection[] = [
         items: [
             { label: "工作坊管理", href: "/admin/workshops", icon: <Calendar size={18} /> },
             { label: "樂器課程", href: "/admin/music", icon: <Music2 size={18} /> },
+            { label: "學員管理", href: "/admin/enrollments", icon: <GraduationCap size={18} /> },
         ],
     },
     {
         title: "內容管理",
         items: [
             { label: "公告管理", href: "/admin/announcements", icon: <Megaphone size={18} /> },
+        { label: "郵件管理", href: "/admin/emails", icon: <Mail size={18} /> },
         ],
     },
     {

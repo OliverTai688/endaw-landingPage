@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     const {
       name, nameEn, coverImage, description,
       containsEquipment, equipmentDescription,
-      rentalAvailable, rentalOffsetAllowed,
+      rentalAvailable, rentalOffsetAllowed, rentalPrice,
       status, levels, faqs,
     } = body;
 
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
         equipmentDescription: equipmentDescription || null,
         rentalAvailable: rentalAvailable || false,
         rentalOffsetAllowed: rentalOffsetAllowed || false,
+        rentalPrice: Number(rentalPrice) || 0,
         status: status || PublishStatus.DRAFT,
         levels: {
           create: (levels || []).map((level: any, li: number) => ({
@@ -89,7 +90,7 @@ export async function PUT(req: NextRequest) {
     const {
       id, name, nameEn, coverImage, description,
       containsEquipment, equipmentDescription,
-      rentalAvailable, rentalOffsetAllowed,
+      rentalAvailable, rentalOffsetAllowed, rentalPrice,
       status, levels, faqs,
     } = body;
 
@@ -117,6 +118,7 @@ export async function PUT(req: NextRequest) {
         equipmentDescription: equipmentDescription || null,
         rentalAvailable: rentalAvailable || false,
         rentalOffsetAllowed: rentalOffsetAllowed || false,
+        rentalPrice: Number(rentalPrice) || 0,
         status: status || PublishStatus.DRAFT,
         levels: {
           create: (levels || []).map((level: any, li: number) => ({

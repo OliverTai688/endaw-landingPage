@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Calendar, MapPin, Users, Clock, AlertCircle, ChevronRight } from "lucide-react";
 import Navbar from "@/components/navbar";
@@ -57,6 +57,7 @@ function mapContentToWorkshop(content: any): WorkshopData {
 
 export default function WorkshopDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const [workshop, setWorkshop] = useState<WorkshopData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -206,6 +207,7 @@ export default function WorkshopDetailPage() {
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 disabled={isFull}
+                                onClick={() => !isFull && router.push(`/workshops/${workshop.id}/checkout`)}
                                 className={`
                   px-8 py-4 rounded-lg font-light text-lg transition-all duration-300
                   ${isFull
@@ -404,6 +406,7 @@ export default function WorkshopDetailPage() {
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                         disabled={isFull}
+                                        onClick={() => !isFull && router.push(`/workshops/${workshop.id}/checkout`)}
                                         className={`
                       w-full mt-6 px-6 py-4 rounded-lg font-light text-lg transition-all duration-300
                       ${isFull
@@ -461,6 +464,7 @@ export default function WorkshopDetailPage() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             disabled={isFull}
+                            onClick={() => !isFull && router.push(`/workshops/${workshop.id}/checkout`)}
                             className={`
                 px-8 py-3 rounded-lg font-light transition-all duration-300
                 ${isFull

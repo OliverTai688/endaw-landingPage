@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "/Users/pzps0964713/Documents/github/endaw-landingPage/src/app/api/bff/v1/admin/content/[id]",
+      "/Users/pzps0964713/Documents/github/endaw-landingPage/src/app/api/bff/v1/workshops/[id]",
+      "/Users/pzps0964713/Documents/github/endaw-landingPage/src/app/workshops/[id]"
+    ],
+    "allow": [
+      "Bash(mkdir -p \"/Users/pzps0964713/Documents/github/endaw-landingPage/src/app/music/[instrument]/checkout\")",
+      "Bash(mkdir -p \"/Users/pzps0964713/Documents/github/endaw-landingPage/src/app/api/bff/v1/music-packages/[id]/fields\")"
+    ]
+  }
+}
