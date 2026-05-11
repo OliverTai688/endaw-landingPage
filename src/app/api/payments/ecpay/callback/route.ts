@@ -19,6 +19,7 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { verifyCallbackCheckMacValue } from '@/lib/ecpay';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { sendOrderConfirmationEmails } from '@/lib/email-service';
 
 // ECPay requires plain-text responses, not JSON
 const ok = () =>
@@ -150,6 +151,46 @@ export async function POST(request: NextRequest) {
       `[ECPay Callback] MerchantTradeNo=${MerchantTradeNo} processed. ` +
         `RtnCode=${RtnCode} orderId=${payment.orderId}`
     );
+
+    // ── 7. Send confirmation emails after successful payment (non-blocking) ──
+    if (isSuccess) {
+      const order = await prisma.order.findUnique({
+        where: { id: payment.orderId },
+        include: {
+          customer: true,
+          attendees: { orderBy: { sortOrder: 'asc' } },
+          enrollment: { include: { package: { select: { name: true } } } },
+        },
+      });
+
+      if (order) {
+        // Resolve title: music package name or workshop content title
+        let title = '課程';
+        if (order.enrollment?.package?.name) {
+          title = order.enrollment.package.name;
+        } else if (order.workshopId) {
+          const content = await prisma.content.findUnique({
+            where: { id: order.workshopId },
+            select: { title: true },
+          });
+          if (content) title = content.title;
+        }
+
+        sendOrderConfirmationEmails({
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          title,
+          totalAmount: order.totalAmount,
+          quantity: order.quantity,
+          orderMode: order.orderMode ?? 'B2C',
+          companyName: order.companyName,
+          ordererName: order.customer.name,
+          ordererEmail: order.customer.email,
+          ordererPhone: order.customer.phone,
+          attendees: order.attendees.map((a) => ({ name: a.name, email: a.email })),
+        }).catch((e) => console.error('[ECPay Callback] email failed:', e));
+      }
+    }
 
     return ok();
   } catch (error: unknown) {

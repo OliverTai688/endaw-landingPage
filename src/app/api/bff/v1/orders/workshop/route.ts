@@ -12,7 +12,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 import { OrderStatus, PaymentStatus, OrderType, Prisma } from '@prisma/client';
-import { sendOrderConfirmationEmails } from '@/lib/email-service';
 
 const AttendeeSchema = z.object({
   name: z.string().min(1),
@@ -124,21 +123,6 @@ export async function POST(req: NextRequest) {
         },
       },
     });
-
-    // Fire confirmation emails (non-blocking)
-    sendOrderConfirmationEmails({
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      title: content.title,
-      totalAmount,
-      quantity,
-      orderMode: data.orderMode,
-      companyName: data.companyName,
-      ordererName: data.name,
-      ordererEmail: data.email,
-      ordererPhone: data.phone,
-      attendees: data.attendees.map((a) => ({ name: a.name, email: a.email || null })),
-    }).catch((e) => console.error('[Email] workshop order emails failed:', e));
 
     return NextResponse.json({ success: true, orderId: order.id }, { status: 201 });
   } catch (err: unknown) {
